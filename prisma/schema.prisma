@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String         @id @default(cuid())
+  handle           String
+  normalizedHandle String         @unique
+  passwordHash     String
+  name             String
+  bio              String         @default("")
+  createdAt        DateTime       @default(now())
+  sessions         Session[]
+  library          LibraryEntry[]
+  ratings          RatingEntry[]
+  publications     Publication[]
+  operations       Operation[]
+  following        Follow[]       @relation("Follower")
+  followers        Follow[]       @relation("Followed")
+  likes            PublicationLike[]
+  comments         Comment[]
+  lists            AnimeList[]
+  listLikes        ListLike[]
+  feedSnapshot     FeedSnapshot?
+  missionClaims    MissionClaim[]
+}
+
+model Session {
+  tokenHash String   @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// Un registro por entrada de MyAnimeList; no agrupa temporadas.
+model Anime {
+  id            String         @id
+  externalId    Int            @unique
+  title         String
+  japanese      String?
+  imageUrl      String?
+  synopsis      String?
+  episodes      Int?
+  year          Int?
+  season        String?
+  genres        Json
+  fetchedAt     DateTime       @default(now())
+  library       LibraryEntry[]
+  ratings       RatingEntry[]
+  mentions      PublicationAnime[]
+  listItems     ListItem[]
+}
+
+model LibraryEntry {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  animeId   String
+  watched   Boolean  @default(false)
+  watchlist Boolean  @default(false)
+  favoritePosition Int?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, animeId])
+  @@index([userId, watched, id])
+  @@index([userId, watchlist, id])
+  @@unique([userId, favoritePosition])
+}
+
+model RatingEntry {
+  id          Int          @id @default(autoincrement())
+  userId      String
+  animeId     String
+  rating      Float
+  watchedOn   String?
+  rewatched   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  anime       Anime        @relation(fields: [animeId], references: [id], onDelete: Restrict)
+  publication Publication?
+
+  @@index([userId, animeId, id])
+  @@index([animeId])
+}
+
+// Las reviews tienen valoración; los posteos solo texto y referencias opcionales.
+model Publication {
+  id            Int         @id @default(autoincrement())
+  userId        String
+  kind          String      @default("review")
+  ratingEntryId Int?        @unique
+  title         String?
+  text          String
+  spoiler       Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime?
+  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ratingEntry   RatingEntry? @relation(fields: [ratingEntryId], references: [id], onDelete: Restrict)
+  mentions      PublicationAnime[]
+  likes         PublicationLike[]
+  comments      Comment[]
+  feedItems     FeedItem[]
+
+  @@index([userId, id])
+}
+
+model PublicationAnime {
+  publicationId Int
+  animeId       String
+  position      Int
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  anime         Anime       @relation(fields: [animeId], references: [id], onDelete: Restrict)
+
+  @@id([publicationId, animeId])
+  @@unique([publicationId, position])
+  @@index([animeId, publicationId])
+}
+
+model Follow {
+  id         Int      @id @default(autoincrement())
+  followerId String
+  followedId String
+  createdAt  DateTime @default(now())
+  follower   User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed   User     @relation("Followed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followerId, id])
+  @@index([followedId, id])
+}
+
+model PublicationLike {
+  userId        String
+  publicationId Int
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, publicationId])
+  @@index([publicationId])
+}
+
+model Comment {
+  id            Int         @id @default(autoincrement())
+  userId        String
+  publicationId Int
+  text          String
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@index([publicationId, id])
+}
+
+// Guarda el resultado original del POST para recuperar un envío cuya respuesta se perdió.
+model Operation {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  key         String
+  fingerprint String
+  response    Json
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, key])
+}
+
+model AnimeList {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  title       String
+  description String   @default("")
+  ordered     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items       ListItem[]
+  likes       ListLike[]
+
+  @@index([userId, id])
+}
+
+model ListItem {
+  listId   Int
+  animeId  String
+  position Int
+  list     AnimeList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  anime    Anime     @relation(fields: [animeId], references: [id], onDelete: Restrict)
+
+  @@id([listId, animeId])
+  @@unique([listId, position])
+  @@index([animeId])
+}
+
+model ListLike {
+  userId    String
+  listId    Int
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list      AnimeList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listId])
+  @@index([listId])
+}
+
+// Una selección activa por cuenta; orden estable al avanzar entre páginas.
+model FeedSnapshot {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items      FeedItem[]
+
+  @@index([expiresAt])
+}
+
+model FeedItem {
+  snapshotId    String
+  publicationId Int
+  position      Int
+  score         Int
+  reasons       Json
+  snapshot      FeedSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  publication   Publication  @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@id([snapshotId, publicationId])
+  @@unique([snapshotId, position])
+  @@index([publicationId])
+}
+
+// Un reclamo por misión y cuenta; conserva la recompensa y regla otorgadas.
+model MissionClaim {
+  userId       String
+  missionId    String
+  rewardId     String
+  rewardName   String
+  rulesVersion String
+  claimedAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([userId, missionId])
+}

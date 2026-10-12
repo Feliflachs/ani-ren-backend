@@ -1,0 +1,39 @@
+{
+  "name": "ani-ren-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API de Ani-Ren: usuarios, catálogo, valoraciones y reviews",
+  "engines": { "node": ">=22.18 <23" },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "prisma generate && tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "db:generate": "node scripts/prisma.cjs generate",
+    "db:migrate": "node scripts/prisma.cjs migrate dev",
+    "db:deploy": "node scripts/prisma.cjs migrate deploy",
+    "db:studio": "node scripts/prisma.cjs studio",
+    "check:catalog": "tsx scripts/check-catalog.ts",
+    "check:anilist": "tsx scripts/check-anilist.ts",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "5.3.0",
+    "express-rate-limit": "8.7.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.18.0",
+    "prisma": "6.19.3",
+    "tsx": "4.23.15",
+    "typescript": "~5.9.3"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.0"
+  }
+}
