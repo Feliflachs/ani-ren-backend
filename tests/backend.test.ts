@@ -127,7 +127,7 @@ test('valorar varias veces cambia el promedio, no duplica vistos ni inventa revi
   assert.equal(second.body.publication.rewatched, true);
   assert.deepEqual(second.body.publication.tags, ['naruto']);
   const detail = await call('/anime/mal:20', { token: bob.token });
-  assert.deepEqual(detail.body.anime.statistics, { averageRating: 4, ratingCount: 2, reviewCount: 1, ratingUserCount: 1 });
+  assert.deepEqual(detail.body.anime.statistics, { averageRating: 4.5, ratingCount: 2, reviewCount: 1, ratingUserCount: 1 });
   const activity = await call('/me/anime/mal:20/activity', { token: alice.token });
   assert.equal(activity.body.currentRating.rating, 4.5);
   assert.equal(activity.body.total, 2);
@@ -136,7 +136,7 @@ test('valorar varias veces cambia el promedio, no duplica vistos ni inventa revi
   assert.equal(await db.libraryEntry.count({ where: { userId: alice.user.id, anime: { id: 'mal:20' } } }), 1);
 });
 
-test('edición conserva creación, registra modificación y no cambia cuál es la última valoración', async () => {
+test('editar estrellas conserva creación y actualiza el voto vigente', async () => {
   const activity = (await call('/me/anime/mal:20/activity', { token: alice.token })).body;
   const old = activity.items[1];
   const edited = await call(`/ratings/${old.id}`, { method: 'PATCH', token: alice.token, body: { rating: 2.5 } });
@@ -144,16 +144,16 @@ test('edición conserva creación, registra modificación y no cambia cuál es l
   assert.equal(edited.body.rating.createdAt, old.createdAt);
   assert.ok(edited.body.rating.updatedAt);
   const stats = (await call('/anime/mal:20', { token: alice.token })).body.anime.statistics;
-  assert.equal(stats.averageRating, 3.5);
+  assert.equal(stats.averageRating, 2.5);
   assert.equal(stats.ratingCount, 2);
-  assert.equal((await call('/me/anime/mal:20/activity', { token: alice.token })).body.currentRating.rating, 4.5);
+  assert.equal((await call('/me/anime/mal:20/activity', { token: alice.token })).body.currentRating.rating, 2.5);
   const publication = (await call('/publications?animeId=mal:20', { token: alice.token })).body.items[0];
   const reviewEdit = await call(`/reviews/${publication.id}`, { method: 'PATCH', token: alice.token,
     body: { rating: 5, text: 'Opinión actualizada después de volver a verlo.' } });
   assert.equal(reviewEdit.status, 200);
   assert.equal(reviewEdit.body.publication.createdAt, publication.createdAt);
   assert.ok(reviewEdit.body.publication.updatedAt);
-  assert.equal((await call('/anime/mal:20', { token: alice.token })).body.anime.statistics.averageRating, 3.75);
+  assert.equal((await call('/anime/mal:20', { token: alice.token })).body.anime.statistics.averageRating, 5);
   assert.equal((await call(`/ratings/${publication.ratingEntryId}`, { method: 'PATCH', token: alice.token, body: { rating: 1 } })).status, 409);
 });
 

@@ -61,6 +61,7 @@ Integración para evaluación: aclarar la admisibilidad de Ani-Ren con el provee
 | DELETE /publications/:id/like | Sin cuerpo | Quita únicamente el like propio; mismo formato |
 | GET /publications/:id/comments | limit?, cursor? | `{ items, total, nextCursor }`; recientes primero |
 | POST /publications/:id/comments | text | 201, `{ comment }`; requiere Idempotency-Key |
+| GET /discover | limit?, cursor? | Animes no vistos, estadísticas, Watchlist y hasta dos reviews por anime |
 | GET /feed | type=following o for-you obligatorio, limit?, cursor? | `{ items, total, nextCursor }`; Para ti agrega generatedAt y expiresAt |
 | POST /lists | title, animeIds, description?, ordered? | 201, `{ list }`; requiere Idempotency-Key |
 | GET /lists | userId?, animeId?, limit?, cursor? | `{ items, total, nextCursor }`; listas recientes primero |
@@ -88,7 +89,7 @@ Publicación: `id`, `kind` (review/post), `userId`, `author`, `animeId`, `rating
 - `author` es perfil básico (`id`, `handle`, `name`, `bio`, `createdAt`), sin credenciales. Se consulta su versión actual. `likedByMe` siempre corresponde a la sesión lectora.
 - Los hashtags se derivan del texto, normalizados sin mayúsculas/tildes. La búsqueda admite etiquetas exactas. No hay resolución automática de hashtags a títulos; las referencias de anime se envían mediante IDs elegidos desde el catálogo.
 - Comment: `id`, `publicationId`, `userId`, `author`, `text`, `createdAt`. Sin edición ni respuestas anidadas en este bloque.
-- Perfil detallado: campos básicos, `statistics` con `watched`, `reviews`, `posts`, `followers`, `following`, `friends`; `isMe`, `isFollowing`, `followsMe`, `isFriend`; `favorites: [{ anime, position }]`. Todos los contadores salen de la base, no de una página del feed.
+- Perfil detallado: campos básicos, `statistics` con `watched`, `watchlist`, `reviews`, `posts`, `followers`, `following`, `friends`; `isMe`, `isFollowing`, `followsMe`, `isFriend`; `favorites: [{ anime, position }]`. Todos los contadores salen de la base, no de una página del feed.
 - Lista: `id`, `userId`, `author`, `title`, `description`, `ordered`, `animeIds`, `items: [{ anime, position }]`, `itemCount`, `likeCount`, `likedByMe`, `createdAt`, `updatedAt`. Siempre devuelve el orden guardado; `ordered` indica si la UI lo presenta como ranking.
 
 ## Validaciones y reglas
@@ -130,15 +131,15 @@ El feed `following` incluye reviews y posteos de cuentas seguidas, recientes pri
 
 La consulta `/publications?animeId=...` encuentra reviews de ese anime y posteos que lo mencionan explícitamente. Agregar `kind=review` para mostrar solo reviews de una ficha. Una mención en un post nunca suma al promedio ni al contador de reviews.
 
-## Para ti: descubrir animes según gustos
+## Para ti: conversaciones según gustos
 
-`GET /feed?type=for-you` selecciona reviews y posteos de otras cuentas **que el lector no sigue**, con al menos un anime referenciado que **no haya marcado como visto**. No incluye charla sin referencias explícitas ni rellena con publicaciones propias o de seguidos. Una watchlist representa pendientes: sus animes no vistos sí pueden aparecer.
+`GET /feed?type=for-you` selecciona reviews y posteos de otras cuentas, incluyendo seguidos, animes vistos y conversaciones sin referencias. Excluye únicamente publicaciones propias. Para encontrar exclusivamente animes no vistos se usa `/discover`.
 
 Las señales iniciales conservan la lógica acordada del frontend:
 
-1. Géneros de favoritos y watchlist forman los intereses. Las estrellas por sí solas todavía no se interpretan como preferencia.
+1. Géneros de vistos, favoritos y watchlist forman los intereses. Las estrellas por sí solas todavía no se interpretan como preferencia.
 2. Etiquetas de publicaciones a las que el lector dio like forman intereses adicionales; likes de listas no afectan esta versión del algoritmo.
-3. Cada candidato suma +3 si menciona un pendiente no visto, +1 por género coincidente y +1 por hashtag coincidente con géneros de interés o etiquetas gustadas. Se deduplican géneros/etiquetas. Para un post mixto, los géneros se toman solo de los animes no vistos.
+3. Cada candidato suma +3 si menciona un pendiente no visto, +1 por género coincidente y +1 por hashtag coincidente con géneros de interés o etiquetas gustadas. Se deduplican géneros/etiquetas. Todos los animes referenciados aportan géneros, incluidos los vistos.
 4. Se ordena por puntuación y después por creación (ID descendente). Se alternan autores cuando quedan alternativas; esto puede poner una publicación de menor afinidad antes que otra del autor recién mostrado.
 5. Sin afinidad se usa fecha y variedad de autores, manteniendo las mismas exclusiones. Si no hay candidatos, se devuelve vacío.
 
@@ -149,10 +150,20 @@ Paginación de Para ti:
 - La primera consulta sin cursor puntúa el conjunto elegible completo y conserva su orden en SQLite durante 20 minutos. No ordena solo la primera página.
 - Hay una selección activa por cuenta. Recargar sin cursor la reemplaza, también si se hace desde otra sesión de la misma cuenta. `generatedAt` y `expiresAt` permiten identificarla.
 - Continuar con `nextCursor` conserva orden incluso después de likes, nuevas publicaciones o reinicios del servidor. Nuevas señales/publicaciones entran al recargar desde el inicio. Cambiar `limit` no duplica items.
-- Al continuar se vuelven a comprobar seguidos y vistos: esos cambios excluyen de inmediato los candidatos afectados. Los cuerpos e interacciones se leen actuales; puntajes/motivos corresponden a `generatedAt`, aunque luego se edite un texto.
+- Seguir a un autor o marcar un anime visto no retira conversaciones de la selección. Los cuerpos e interacciones se leen actuales; puntajes/motivos corresponden a `generatedAt`, aunque luego se edite un texto.
 - `total` cuenta los miembros de esa selección que siguen siendo elegibles, incluidos los ya paginados; puede disminuir. No cuenta novedades posteriores a la selección. No es `items.length` ni el total histórico de la red.
 - Cursor de otra cuenta/tipo: 400. Selección vencida o reemplazada: 410 `FEED_EXPIRED`; el frontend debe descartar ese cursor y cargar la primera página, sin cerrar sesión.
 - Al crear una selección se limpian las vencidas; las restantes están acotadas a una por cuenta. No se consulta Jikan para recomendar contenido ya guardado.
+
+## Descubrir: animes nuevos con opiniones
+
+`GET /discover?limit=20&cursor=...` requiere sesión. Devuelve `{ items, total, nextCursor }`; cada item es `{ id, anime, watchlist, reviews }`. `anime` incluye `statistics` con el mismo significado que la ficha. `reviews` contiene hasta dos publicaciones de autores distintos, ordenadas por likes y luego ID descendente, sin filtrar por puntuación positiva. Conservan el indicador spoiler y sus interacciones. Sin reviews se devuelve un array vacío.
+
+Se recomienda el catálogo ya guardado en Ani-Ren, sin importar masivamente el proveedor. Se excluyen todos los IDs marcados vistos por el lector; los animes de cuentas seguidas sí pueden aparecer. Cada anime aparece una sola vez. Se ordena por coincidencias de géneros de vistos/favoritos/watchlist y se desempata por ID externo descendente. La primera versión no usa estrellas como señal.
+
+Selección persistente de 20 minutos, independiente de Para ti. Recargar sin cursor reemplaza la selección de Descubrir de esa cuenta. Al paginar se vuelven a excluir vistos, manteniendo posiciones estables. Cursores inválidos/de otra cuenta o sección devuelven 400; vencidos/reemplazados, 410. El frontend reinicia ante 410. Los metadatos, votos, Watchlist e interacciones se leen actuales. `total` cuenta animes de la selección todavía no vistos, incluyendo páginas anteriores.
+
+Los datos se consultan en lotes por página, sin peticiones externas por tarjeta. Para esta comunidad inicial se puntúa el catálogo guardado completo y se seleccionan reviews en memoria por página; medir e indexar antes de escalar a un catálogo o actividad grandes.
 
 ## Búsqueda por categoría
 
@@ -208,9 +219,11 @@ Usa limit/cursor como los otros listados, vinculando el cursor a cuenta y ámbit
 
 ## Promedios y páginas
 
-El promedio incluye cada RatingEntry una vez, con o sin review. Las puntuaciones repetidas de un usuario cuentan individualmente. La puntuación actual del usuario es la última entrada creada, no su media ni la última editada.
+El puntaje global utiliza la valoración más reciente realizada o modificada por cada usuario, con una media simple y un voto por persona/anime. Crear una valoración o cambiar efectivamente sus estrellas actualiza `LibraryEntry.currentRatingId` en la misma transacción. Editar texto, título, spoilers, fecha de visto o reenviar las mismas estrellas no cambia el voto vigente. Reintentar un POST ya confirmado tampoco lo cambia. Se conserva todo el historial y las fechas originales de las publicaciones.
 
-Los listados paginados usan limit=20 por defecto, máximo 50, y cursor opaco ligado a la consulta y sus filtros; los feeds y biblioteca también lo ligan a la cuenta. Reutilizar el cursor fuera de ese ámbito devuelve 400. `total` representa todas las coincidencias actuales; `items.length` representa solo esa página. Sin más resultados, nextCursor es null. Excepto la selección de Para ti descrita arriba, no son instantáneas: cambiar relaciones o referencias puede cambiar coincidencias entre páginas. Favoritos devuelve la colección completa acotada a 100. Jikan usa page/nextPage en lugar de cursor, según su contrato.
+`ratingCount` cuenta entradas históricas; `ratingUserCount` cuenta votos vigentes/personas y es el denominador del promedio; `reviewCount` cuenta reviews. Sin votos, `averageRating` es null. La migración conserva como voto inicial la última entrada creada de cada usuario/anime: los datos antiguos no permiten distinguir cambios de estrellas de otras ediciones.
+
+Los listados paginados usan limit=20 por defecto, máximo 50, y cursor opaco ligado a la consulta y sus filtros; los feeds y biblioteca también lo ligan a la cuenta. Reutilizar el cursor fuera de ese ámbito devuelve 400. `total` representa todas las coincidencias actuales; `items.length` representa solo esa página. Sin más resultados, nextCursor es null. Excepto las selecciones de Para ti y Descubrir descritas arriba, no son instantáneas: cambiar relaciones o referencias puede cambiar coincidencias entre páginas. Favoritos devuelve la colección completa acotada a 100. Jikan usa page/nextPage en lugar de cursor, según su contrato.
 
 El resumen de anime distingue `averageRating`, `ratingCount`, `reviewCount` y `ratingUserCount`. Una página del feed nunca se usa para calcular esos totales.
 
@@ -225,7 +238,7 @@ Formato: `{ "error": { "code": "...", "message": "...", "fields": [...] } }`. fi
 | 403 | NOT_OWNER, ORIGIN_NOT_ALLOWED |
 | 404 | ANIME_NOT_FOUND, PUBLICATION_NOT_FOUND, RATING_NOT_FOUND, USER_NOT_FOUND, LIST_NOT_FOUND, MISSION_NOT_FOUND |
 | 409 | CONFLICT, OPERATION_CONFLICT, EDIT_REVIEW, MISSION_INCOMPLETE |
-| 410 | FEED_EXPIRED; recargar Para ti desde la primera página |
+| 410 | FEED_EXPIRED o DISCOVERY_EXPIRED; recargar la sección desde la primera página |
 | 413 | BODY_TOO_LARGE; máximo 32 KB de JSON |
 | 429 | AUTH_RATE_LIMIT, RATE_LIMIT |
 | 500 | INTERNAL_ERROR, sin detalles internos |

@@ -147,13 +147,13 @@ export async function animeDetail(db: PrismaClient, catalog: Catalog, id: string
       stale = true;
     }
   }
-  const [ratings, reviews, users] = await db.$transaction([
-    db.ratingEntry.aggregate({ where: { animeId: id }, _avg: { rating: true }, _count: true }),
+  const [ratings, reviews, historyCount] = await db.$transaction([
+    db.ratingEntry.aggregate({ where: { animeId: id, currentFor: { some: { animeId: id } } }, _avg: { rating: true }, _count: true }),
     db.publication.count({ where: { ratingEntry: { animeId: id } } }),
-    db.ratingEntry.groupBy({ by: ['userId'], where: { animeId: id }, orderBy: { userId: 'asc' } }),
+    db.ratingEntry.count({ where: { animeId: id } }),
   ]);
   return { ...anime, metadataStale: stale, statistics: {
-    averageRating: ratings._avg.rating, ratingCount: ratings._count,
-    reviewCount: reviews, ratingUserCount: users.length,
+    averageRating: ratings._avg.rating, ratingCount: historyCount,
+    reviewCount: reviews, ratingUserCount: ratings._count,
   } };
 }

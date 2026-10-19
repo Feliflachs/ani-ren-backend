@@ -1,3 +1,5 @@
+> Actualización 18/10/2026: las reglas vigentes de puntuación, Para ti y Descubrir están en API.md y README.md. Un voto vigente por persona; editar estrellas actualiza ese voto. Para ti incluye vistos y seguidos; Descubrir agrupa solo animes no vistos. El frontend integrado está en feature/integracion-backend. Las notas históricas que contradigan estas reglas quedan reemplazadas.
+
 # Ani-Ren: integrar el frontend con el backend local
 
 Fecha: 12/10/2026. Backend listo para integrar el núcleo implementado. No equivale a terminar todas las funcionalidades propuestas. Trabajar sobre la rama `context` del frontend; leer su HANDOFF.md junto con este archivo. No se modificó el repositorio del frontend.

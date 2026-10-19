@@ -11,7 +11,7 @@ Implementado y probado mediante HTTP y una base SQLite real:
 - Biblioteca de vistos, watchlist y favoritos ordenados, sin duplicar un anime por repetir valoraciones.
 - Valoraciones sin texto y reviews independientes, con múltiples entradas por usuario/anime.
 - Edición por autor, fecha original y última modificación.
-- Promedio que incluye todas las valoraciones, puntuación personal más reciente y totales separados.
+- Promedio de un voto vigente por persona, historial conservado y totales separados.
 - Paginación, validación, errores y protección contra duplicar un mismo envío al reintentar.
 - Posteos comunes con hashtags y referencias explícitas de anime, sin generar valoraciones.
 - Perfil editable (nombre/biografía), seguir/dejar de seguir y amigos como seguimientos recíprocos.
@@ -19,11 +19,11 @@ Implementado y probado mediante HTTP y una base SQLite real:
 - Feed cronológico de cuentas seguidas y consultas por autor, anime y tipo de publicación.
 - Listas personales con orden, edición propia y likes independientes.
 - Búsqueda por categoría; usuarios, publicaciones y listas sin distinguir tildes, etiquetas exactas y filtros locales.
-- Para ti: animes no vistos según favoritos, pendientes y etiquetas gustadas, mediante publicaciones de cuentas no seguidas.
+- Para ti: conversaciones según vistos, favoritos, Watchlist y etiquetas gustadas, incluyendo cuentas seguidas. Descubrir: animes no vistos con hasta dos reviews de autores distintos.
 - Aura: cinco misiones acumulativas, progreso desde toda la actividad y recompensas únicas persistentes.
 - Rangos cada 100 animes distintos vistos y ranking de usuarios global/amigos con empates.
 
-El frontend en `ani-ren-app/context` todavía usa su demo local. La integración en Expo y la prueba en teléfono siguen pendientes: comenzar por [HANDOFF_FRONTEND.md](HANDOFF_FRONTEND.md). No hay todavía Tendencia, mapa remoto, subida de imágenes ni equipamiento de decoradores. La búsqueda global usa Tenrai con conectividad verificada; no incorpora filtros avanzados. Comunidad, listas, descubrimiento y Aura pueden funcionar con los animes ya guardados.
+El frontend está integrado en `ani-ren-app/feature/integracion-backend`; `context` conserva la referencia visual histórica. La prueba en teléfono físico sigue pendiente. No hay todavía Tendencia, mapa remoto, subida de imágenes ni equipamiento de decoradores. La búsqueda global usa Tenrai con conectividad verificada; no incorpora filtros avanzados. Comunidad, listas, descubrimiento y Aura pueden funcionar con los animes ya guardados.
 
 La API requiere sesión salvo registro, login y salud. No se habilitaron aún enlaces públicos sin sesión.
 
@@ -231,3 +231,11 @@ Para probar desde Expo: conectar sus contextos, búsquedas, feeds, Aura y rankin
 Las reglas iniciales de Aura se confirmaron el 12/10/2026: cada review nueva cuenta para la misión de reviews aunque repita anime; las misiones de vistos cuentan IDs distintos. Rangos en 0/100/200/300/400 vistos; recompensas únicas sin puntos. `GET /api/me/aura` consulta el estado y `PUT /api/me/missions/:id/claim` reclama con sesión, sin cuerpo. Los desbloqueos se conservan tras reiniciar; no se activan desde números enviados por la app.
 
 Para ti recomienda contenido ya publicado en Ani-Ren; una comunidad vacía devuelve un feed vacío. Selecciona todo el conjunto elegible antes de paginar y mantiene el orden durante 20 minutos. La búsqueda local recorre textos en servidor para normalizar tildes y devuelve solo una página. Estas implementaciones son para una comunidad inicial: medir e indexar antes de escalar. Los detalles de señales, exclusiones, cursores y límites están en API.md.
+
+## Cambios de producto del 18/10/2026
+
+El puntaje global utiliza la valoración más reciente realizada o modificada por cada usuario. Crear una valoración o cambiar sus estrellas actualiza un voto vigente por persona/anime. Editar solamente texto u otros campos, o reenviar las mismas estrellas, no cambia el voto. El promedio es una media simple de votos vigentes. Las reviews anteriores permanecen en el historial con sus interacciones.
+
+La migración `202610180001_current_rating` agrega la referencia al voto vigente sin borrar entradas. Para registros previos conserva la última entrada creada: no se puede inferir si una edición histórica cambió estrellas. Agrega también las selecciones de Descubrir.
+
+Para ti admite vistos, seguidos y posteos sin menciones, conservando afinidad y variedad de autores. Descubrir (`GET /discover`) muestra animes guardados no vistos, una tarjeta por anime y hasta dos reviews de autores distintos. Explorar/búsqueda no excluye vistos. El contrato actualizado está en API.md; estas reglas reemplazan las notas anteriores de planificación.

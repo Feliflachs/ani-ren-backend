@@ -57,7 +57,7 @@ export function readsRouter(db: PrismaClient, catalog: Catalog) {
       db.ratingEntry.findMany({ where: { ...where, id: page.before ? { lt: page.before } : undefined },
         orderBy: { id: 'desc' }, take: page.limit + 1, include: ratingInclude }),
       db.ratingEntry.count({ where }),
-      db.ratingEntry.findFirst({ where, orderBy: { id: 'desc' }, include: ratingInclude }),
+      db.ratingEntry.findFirst({ where: { ...where, currentFor: { some: { userId, animeId } } }, include: ratingInclude }),
       db.libraryEntry.findUnique({ where: { userId_animeId: where } }),
     ]);
     res.json({ ...pageResult(rows, total, page, ratingDto), watched: library?.watched ?? false,

@@ -7,22 +7,19 @@ import { pageFields } from './pagination';
 import { genresOf } from './search';
 import { publicationDto, publicationInclude } from './serializers';
 import { extractTags, normalizeTag } from './validation';
+import { animeDiscoveryRouter } from './anime-discovery';
 
-// Debe cumplirse también al continuar una selección: seguir a alguien o marcar
-// un anime visto no puede hacerlo reaparecer por conservar un cursor anterior.
+// Para ti reúne conversaciones; vistos y seguidos también pueden ser relevantes.
 function eligible(userId: string): Prisma.PublicationWhereInput {
-  const unseen: Prisma.AnimeWhereInput = { library: { none: { userId, watched: true } } };
-  return { userId: { not: userId }, user: { followers: { none: { followerId: userId } } },
-    OR: [{ ratingEntry: { anime: unseen } }, { mentions: { some: { anime: unseen } } }] };
+  return { userId: { not: userId } };
 }
 
 async function createSelection(tx: Prisma.TransactionClient, userId: string) {
   const library = await tx.libraryEntry.findMany({ where: { userId }, select: {
     animeId: true, watched: true, watchlist: true, favoritePosition: true, anime: { select: { genres: true } },
   } });
-  const watched = new Set(library.filter((row) => row.watched).map((row) => row.animeId));
   const watchlist = new Set(library.filter((row) => row.watchlist && !row.watched).map((row) => row.animeId));
-  const interests = new Set(library.filter((row) => row.watchlist || row.favoritePosition !== null)
+  const interests = new Set(library.filter((row) => row.watched || row.watchlist || row.favoritePosition !== null)
     .flatMap((row) => genresOf(row.anime.genres).map((genre) => normalizeTag(genre.name))));
   const likes = await tx.publicationLike.findMany({ where: { userId }, select: { publication: { select: { text: true } } } });
   const likedTags = new Set(likes.flatMap((like) => extractTags(like.publication.text)));
@@ -34,8 +31,7 @@ async function createSelection(tx: Prisma.TransactionClient, userId: string) {
     mentions: { select: { anime: { select: { id: true, genres: true } } } },
   } });
   const ranked = candidates.map((row) => {
-    const anime = (row.ratingEntry ? [row.ratingEntry.anime] : row.mentions.map((mention) => mention.anime))
-      .filter((item) => !watched.has(item.id));
+    const anime = row.ratingEntry ? [row.ratingEntry.anime] : row.mentions.map((mention) => mention.anime);
     const genreNames = [...new Set(anime.flatMap((item) => genresOf(item.genres).map((genre) => normalizeTag(genre.name))))];
     const matchedGenres = genreNames.filter((genre) => interests.has(genre)).sort();
     const matchedTags = extractTags(row.text).filter((tag) => interests.has(tag) || likedTags.has(tag)).sort();
@@ -64,6 +60,7 @@ async function createSelection(tx: Prisma.TransactionClient, userId: string) {
 
 export function discoveryRouter(db: PrismaClient) {
   const router = Router();
+  router.use(animeDiscoveryRouter(db));
   router.get('/feed', async (req, res, next) => {
     if (req.query.type !== 'for-you') { next(); return; }
     const query = z.object({ ...pageFields, type: z.literal('for-you') }).strict().parse(req.query);

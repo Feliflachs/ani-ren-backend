@@ -45,6 +45,7 @@ test('migrar una base del primer bloque conserva reviews, historial, sesiones y 
     const ratings = await db.ratingEntry.aggregate({ _avg: { rating: true }, _count: true });
     assert.equal(ratings._avg.rating, 4); assert.equal(ratings._count, 2);
     const library = await db.libraryEntry.findFirstOrThrow();
+    assert.equal(library.currentRatingId, 42);
     assert.equal(library.watched, true); assert.equal(library.watchlist, false); assert.equal(library.favoritePosition, null);
     assert.equal(await db.session.count(), 1);
     assert.deepEqual((await db.operation.findFirstOrThrow()).response, { publication: { id: '17' } });

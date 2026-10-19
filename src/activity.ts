@@ -25,7 +25,8 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
       const rating = await tx.ratingEntry.create({ data: { ...data, userId }, include: ratingInclude });
       await tx.libraryEntry.upsert({
         where: { userId_animeId: { userId, animeId: data.animeId } },
-        create: { userId, animeId: data.animeId, watched: true }, update: { watched: true },
+        create: { userId, animeId: data.animeId, watched: true, currentRatingId: rating.id },
+        update: { watched: true, currentRatingId: rating.id },
       });
       return { rating: ratingDto(rating) };
     });
@@ -52,7 +53,8 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
       }, include: publicationInclude(userId) });
       await tx.libraryEntry.upsert({
         where: { userId_animeId: { userId, animeId: data.animeId } },
-        create: { userId, animeId: data.animeId, watched: true }, update: { watched: true },
+        create: { userId, animeId: data.animeId, watched: true, currentRatingId: rating.id },
+        update: { watched: true, currentRatingId: rating.id },
       });
       return { publication: publicationDto(publication) };
     });
@@ -68,6 +70,10 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
       if (!existing) throw new ApiError(404, 'RATING_NOT_FOUND', 'Valoración no encontrada.');
       if (existing.userId !== userId) throw new ApiError(403, 'NOT_OWNER', 'Solo el autor puede editar esta valoración.');
       if (existing.publication) throw new ApiError(409, 'EDIT_REVIEW', 'Editá esta valoración desde su review.');
+      if (changes.rating !== undefined && changes.rating !== existing.rating) {
+        await tx.libraryEntry.update({ where: { userId_animeId: { userId, animeId: existing.animeId } },
+          data: { currentRatingId: id } });
+      }
       return tx.ratingEntry.update({ where: { id }, data: { ...changes, updatedAt: new Date() }, include: ratingInclude });
     });
     res.json({ rating: ratingDto(result) });
@@ -78,12 +84,16 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
     const { userId } = res.locals.identity as Identity;
     const { title, text, spoiler, ...ratingChanges } = schemas.reviewEdit.parse(req.body);
     const publication = await db.$transaction(async (tx) => {
-      const existing = await tx.publication.findUnique({ where: { id } });
+      const existing = await tx.publication.findUnique({ where: { id }, include: { ratingEntry: true } });
       if (!existing || existing.kind !== 'review' || existing.ratingEntryId === null) {
         throw new ApiError(404, 'PUBLICATION_NOT_FOUND', 'Review no encontrada.');
       }
       if (existing.userId !== userId) throw new ApiError(403, 'NOT_OWNER', 'Solo el autor puede editar esta review.');
       const updatedAt = new Date();
+      if (existing.ratingEntry && ratingChanges.rating !== undefined && ratingChanges.rating !== existing.ratingEntry.rating) {
+        await tx.libraryEntry.update({ where: { userId_animeId: { userId, animeId: existing.ratingEntry.animeId } },
+          data: { currentRatingId: existing.ratingEntryId } });
+      }
       if (Object.keys(ratingChanges).length > 0) {
         await tx.ratingEntry.update({ where: { id: existing.ratingEntryId }, data: { ...ratingChanges, updatedAt } });
       }

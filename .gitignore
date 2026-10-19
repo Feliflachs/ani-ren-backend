@@ -8,3 +8,5 @@ dist/
 coverage/
 .test-data/
 *.log
+
+.npm-cache/

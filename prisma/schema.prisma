@@ -27,6 +27,7 @@ model User {
   lists            AnimeList[]
   listLikes        ListLike[]
   feedSnapshot     FeedSnapshot?
+  discoverySnapshot DiscoverySnapshot?
   missionClaims    MissionClaim[]
 }
 
@@ -67,6 +68,8 @@ model LibraryEntry {
   watched   Boolean  @default(false)
   watchlist Boolean  @default(false)
   favoritePosition Int?
+  currentRatingId Int?
+  currentRating RatingEntry? @relation("CurrentRating", fields: [currentRatingId], references: [id], onDelete: Restrict)
   user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Restrict)
 
@@ -74,6 +77,7 @@ model LibraryEntry {
   @@index([userId, watched, id])
   @@index([userId, watchlist, id])
   @@unique([userId, favoritePosition])
+  @@index([currentRatingId])
 }
 
 model RatingEntry {
@@ -88,6 +92,7 @@ model RatingEntry {
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   anime       Anime        @relation(fields: [animeId], references: [id], onDelete: Restrict)
   publication Publication?
+  currentFor  LibraryEntry[] @relation("CurrentRating")
 
   @@index([userId, animeId, id])
   @@index([animeId])
@@ -250,4 +255,14 @@ model MissionClaim {
   user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@id([userId, missionId])
+}
+
+model DiscoverySnapshot {
+  id String @id @default(cuid())
+  userId String @unique
+  animeIds Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
 }

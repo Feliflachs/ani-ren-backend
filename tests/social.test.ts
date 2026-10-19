@@ -202,6 +202,7 @@ test('watchlist y favoritos ordenados no generan vistos; reemplazo y permisos pr
   assert.equal((await call('/me/library', bob)).body.total, 0);
   const watchlist = (await call('/me/library?collection=watchlist&limit=1', bob)).body;
   assert.equal(watchlist.total, 2);
+  assert.equal((await call(`/users/${bob.user.id}`, alice)).body.user.statistics.watchlist, 2);
   assert.equal((await call(`/me/library?cursor=${watchlist.nextCursor}`, bob)).status, 400);
   const input = { animeIds: ['mal:21', 'mal:20'] };
   const first = await call('/me/favorites', bob, 'PUT', input);

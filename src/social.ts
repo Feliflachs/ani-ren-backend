@@ -42,6 +42,7 @@ export function socialRouter(db: PrismaClient) {
     const user = await db.$transaction(async (tx) => {
       const profile = await requireUser(tx, id);
       const watched = await tx.libraryEntry.count({ where: { userId: id, watched: true } });
+      const watchlist = await tx.libraryEntry.count({ where: { userId: id, watchlist: true } });
       const reviews = await tx.publication.count({ where: { userId: id, kind: 'review' } });
       const posts = await tx.publication.count({ where: { userId: id, kind: 'post' } });
       const followers = await tx.follow.count({ where: { followedId: id } });
@@ -51,7 +52,7 @@ export function socialRouter(db: PrismaClient) {
       const incoming = await tx.follow.findUnique({ where: { followerId_followedId: { followerId: id, followedId: userId } } });
       const favorites = await tx.libraryEntry.findMany({ where: { userId: id, favoritePosition: { not: null } },
         orderBy: { favoritePosition: 'asc' }, include: { anime: true } });
-      return { ...profile, rank: rankProgress(watched), statistics: { watched, reviews, posts, followers, following, friends },
+      return { ...profile, rank: rankProgress(watched), statistics: { watched, watchlist, reviews, posts, followers, following, friends },
         isMe: userId === id, isFollowing: !!outgoing, followsMe: !!incoming, isFriend: !!outgoing && !!incoming,
         favorites: favorites.map((entry) => ({ anime: entry.anime, position: entry.favoritePosition })) };
     });
