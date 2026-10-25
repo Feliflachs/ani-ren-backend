@@ -6,8 +6,8 @@ import path from 'node:path';
 import type { Server } from 'node:http';
 import { PrismaClient } from '@prisma/client';
 import { createApp } from '../src/app';
-import type { Catalog } from '../src/catalog';
-import { ApiError } from '../src/errors';
+import type { Catalog } from '../src/modules/catalog/catalog';
+import { ApiError } from '../src/shared/errors';
 
 const root = path.resolve('.test-data');
 let directory: string;
@@ -182,15 +182,16 @@ test('likes y comentarios pertenecen a cada publicaciÃ³n, no al anime; la ediciÃ
 });
 
 test('perfil editable solo propio y sin exponer credenciales', async () => {
-  const changed = await call('/me/profile', alice, 'PATCH', { name: 'Alice Ani', bio: 'Me gusta el anime' });
+  const changed = await call('/me/profile', alice, 'PATCH', { name: 'Alice Ani', bio: 'Me gusta el anime', avatarUrl: 'https://images.example/avatar.png' });
   assert.equal(changed.status, 200);
   const profile = (await call(`/users/${alice.user.id}`, bob)).body.user;
   assert.equal(profile.name, 'Alice Ani'); assert.equal(profile.bio, 'Me gusta el anime');
+  assert.equal(profile.avatarUrl, 'https://images.example/avatar.png');
   assert.equal(profile.statistics.posts, 1); assert.equal(profile.statistics.reviews, 2);
   assert.equal(profile.statistics.watched, 1); assert.equal(profile.statistics.friends, 1);
   assert.equal('passwordHash' in profile, false);
   assert.equal((await call(`/publications/${postId}`, bob)).body.publication.author.name, 'Alice Ani');
-  for (const input of [{}, { name: ' ' }, { userId: bob.user.id }, { handle: 'otro' }, { bio: 'x'.repeat(501) }]) {
+  for (const input of [{}, { name: ' ' }, { userId: bob.user.id }, { handle: 'otro' }, { bio: 'x'.repeat(501) }, { avatarUrl: 'file:///local.png' }, { avatarUrl: 'https://user:pass@example.com/a.png' }]) {
     assert.equal((await call('/me/profile', alice, 'PATCH', input)).status, 400);
   }
   assert.equal((await call(`/users/${bob.user.id}`, alice)).body.user.name, 'SocialBob');
@@ -228,10 +229,10 @@ test('watchlist y favoritos ordenados no generan vistos; reemplazo y permisos pr
   } finally { await db.$executeRawUnsafe('DROP TRIGGER test_reject_favorite'); }
   assert.equal((await call('/me/library/mal:20', bob, 'PATCH', { watched: true })).status, 200);
   assert.equal((await call('/me/library/mal:20', bob, 'PATCH', { watchlist: false })).body.watched, true);
-  assert.equal((await call('/me/library/mal:20', bob, 'PATCH', { watched: false })).status, 400);
+  assert.equal((await call('/me/library/mal:20', bob, 'PATCH', { watched: false })).status, 200);
   assert.equal((await call('/me/favorites', bob, 'PUT', { animeIds: [] })).body.total, 0);
   assert.equal((await call('/me/library?collection=watchlist', bob)).body.total, 1);
-  assert.equal((await call('/me/library', bob)).body.total, 1);
+  assert.equal((await call('/me/library', bob)).body.total, 0);
   assert.equal((await call('/me/anime/mal:20/activity', bob)).body.total, 0);
 });
 

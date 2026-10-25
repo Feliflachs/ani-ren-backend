@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { countryCodeSchema } from '../modules/explore/countries';
 
 export const animeIdSchema = z.string().regex(/^mal:[1-9]\d{0,8}$/, 'Usá una referencia como mal:20.');
 export const uniqueAnimeIds = (maximum: number) => z.array(animeIdSchema).max(maximum)
@@ -34,8 +35,8 @@ export function activitySchemas(timeZone: string) {
   };
   const notEmpty = (value: object) => Object.keys(value).length > 0;
   return {
-    ratingCreate: z.object({ animeId: animeIdSchema, ...fields }).strict(),
-    reviewCreate: z.object({ animeId: animeIdSchema, ...reviewFields }).strict(),
+    ratingCreate: z.object({ animeId: animeIdSchema, ...fields, countryCode: countryCodeSchema.nullable().optional() }).strict(),
+    reviewCreate: z.object({ animeId: animeIdSchema, ...reviewFields, countryCode: countryCodeSchema.nullable().optional() }).strict(),
     ratingEdit: z.object(fields).partial().strict().refine(notEmpty, 'Enviá algún cambio.'),
     reviewEdit: z.object(reviewFields).partial().strict().refine(notEmpty, 'Enviá algún cambio.'),
   };

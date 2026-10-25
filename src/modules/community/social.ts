@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { profileSelect, type Identity } from './auth';
-import { ApiError } from './errors';
-import { pageFields, pageResult, readPage } from './pagination';
-import { fingerprint, operationKeySchema, saveOperation } from './operations';
-import { commentDto, commentInclude, publicationDto, publicationInclude } from './serializers';
-import { resourceIdSchema } from './validation';
-import { rankProgress } from './aura';
+import { profileSelect, type Identity } from '../auth/auth';
+import { ApiError } from '../../shared/errors';
+import { pageFields, pageResult, readPage } from '../../shared/pagination';
+import { fingerprint, operationKeySchema, saveOperation } from '../../shared/operations';
+import { commentDto, commentInclude, publicationDto, publicationInclude } from '../../shared/serializers';
+import { resourceIdSchema } from '../../shared/validation';
+import { rankProgress } from '../aura/aura';
 
 const userIdSchema = z.string().min(1).max(100);
 const emptyBody = z.object({}).strict();
@@ -31,7 +31,10 @@ export function socialRouter(db: PrismaClient) {
   const router = Router();
   router.patch('/me/profile', async (req, res) => {
     const data = z.object({ name: z.string().trim().min(1).max(60).optional(),
-      bio: z.string().trim().max(500).optional() }).strict()
+      bio: z.string().trim().max(500).optional(),
+      avatarUrl: z.url({ protocol: /^https$/ }).max(2000).refine(value => {
+        const url = new URL(value); return !url.username && !url.password;
+      }).nullable().optional() }).strict()
       .refine((value) => Object.keys(value).length > 0, 'Indicá un cambio.').parse(req.body);
     const { userId } = res.locals.identity as Identity;
     res.json({ user: await db.user.update({ where: { id: userId }, data, select: profileSelect }) });
@@ -41,6 +44,7 @@ export function socialRouter(db: PrismaClient) {
     const { userId } = res.locals.identity as Identity;
     const user = await db.$transaction(async (tx) => {
       const profile = await requireUser(tx, id);
+      const points = (await tx.missionClaim.aggregate({ where: { userId: id }, _sum: { points: true } }))._sum.points ?? 0;
       const watched = await tx.libraryEntry.count({ where: { userId: id, watched: true } });
       const watchlist = await tx.libraryEntry.count({ where: { userId: id, watchlist: true } });
       const reviews = await tx.publication.count({ where: { userId: id, kind: 'review' } });
@@ -52,7 +56,7 @@ export function socialRouter(db: PrismaClient) {
       const incoming = await tx.follow.findUnique({ where: { followerId_followedId: { followerId: id, followedId: userId } } });
       const favorites = await tx.libraryEntry.findMany({ where: { userId: id, favoritePosition: { not: null } },
         orderBy: { favoritePosition: 'asc' }, include: { anime: true } });
-      return { ...profile, rank: rankProgress(watched), statistics: { watched, watchlist, reviews, posts, followers, following, friends },
+      return { ...profile, auraPoints: points, rank: rankProgress(points), statistics: { watched, watchlist, reviews, posts, followers, following, friends },
         isMe: userId === id, isFollowing: !!outgoing, followsMe: !!incoming, isFriend: !!outgoing && !!incoming,
         favorites: favorites.map((entry) => ({ anime: entry.anime, position: entry.favoritePosition })) };
     });

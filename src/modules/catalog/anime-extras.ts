@@ -1,8 +1,8 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { Router } from 'express';
 import { z } from 'zod';
-import { ApiError } from './errors';
-import { animeIdSchema } from './validation';
+import { ApiError } from '../../shared/errors';
+import { animeIdSchema } from '../../shared/validation';
 import { networkCodes } from './catalog-errors';
 
 export const ANILIST_URL = 'https://graphql.anilist.co';

@@ -1,25 +1,25 @@
 import { Router } from 'express';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import type { Identity } from './auth';
-import { ApiError } from './errors';
-import { pageFields } from './pagination';
-import { genresOf } from './search';
-import { publicationDto, publicationInclude } from './serializers';
-import { extractTags, normalizeTag } from './validation';
+import type { Identity } from '../auth/auth';
+import { ApiError } from '../../shared/errors';
+import { pageFields } from '../../shared/pagination';
+import { genresOf } from '../search/search';
+import { publicationDto, publicationInclude } from '../../shared/serializers';
+import { extractTags, normalizeTag } from '../../shared/validation';
 import { animeDiscoveryRouter } from './anime-discovery';
 
-// Para ti reúne conversaciones; vistos y seguidos también pueden ser relevantes.
+// Para ti descubre conversaciones de otras cuentas que todavía no seguís.
 function eligible(userId: string): Prisma.PublicationWhereInput {
-  return { userId: { not: userId } };
+  return { userId: { not: userId }, user: { followers: { none: { followerId: userId } } } };
 }
 
 async function createSelection(tx: Prisma.TransactionClient, userId: string) {
   const library = await tx.libraryEntry.findMany({ where: { userId }, select: {
     animeId: true, watched: true, watchlist: true, favoritePosition: true, anime: { select: { genres: true } },
   } });
-  const watchlist = new Set(library.filter((row) => row.watchlist && !row.watched).map((row) => row.animeId));
-  const interests = new Set(library.filter((row) => row.watched || row.watchlist || row.favoritePosition !== null)
+  const watchlist = new Set(library.filter((row) => row.watchlist).map((row) => row.animeId));
+  const interests = new Set(library.filter((row) => row.watchlist || row.favoritePosition !== null)
     .flatMap((row) => genresOf(row.anime.genres).map((genre) => normalizeTag(genre.name))));
   const likes = await tx.publicationLike.findMany({ where: { userId }, select: { publication: { select: { text: true } } } });
   const likedTags = new Set(likes.flatMap((like) => extractTags(like.publication.text)));

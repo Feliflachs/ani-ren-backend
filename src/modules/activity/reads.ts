@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import type { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod';
-import type { Identity } from './auth';
-import type { Catalog } from './catalog';
-import { animeDetail } from './catalog';
-import { ApiError } from './errors';
-import { animeIdSchema, resourceIdSchema } from './validation';
-import { pageFields, pageResult, readPage } from './pagination';
-import { publicationDto, publicationInclude, ratingDto, ratingInclude } from './serializers';
+import type { Identity } from '../auth/auth';
+import type { Catalog } from '../catalog/catalog';
+import { animeDetail } from '../catalog/catalog';
+import { ApiError } from '../../shared/errors';
+import { animeIdSchema, resourceIdSchema } from '../../shared/validation';
+import { pageFields, pageResult, readPage } from '../../shared/pagination';
+import { publicationDto, publicationInclude, ratingDto, ratingInclude } from '../../shared/serializers';
 
 export function readsRouter(db: PrismaClient, catalog: Catalog) {
   const router = Router();
@@ -53,16 +53,17 @@ export function readsRouter(db: PrismaClient, catalog: Catalog) {
     const query = z.object(pageFields).strict().parse(req.query);
     const page = readPage(query, `activity:${userId}:${animeId}`);
     const where = { userId, animeId };
-    const [rows, total, current, library] = await db.$transaction([
+    const [rows, total, current, library, lists] = await db.$transaction([
       db.ratingEntry.findMany({ where: { ...where, id: page.before ? { lt: page.before } : undefined },
         orderBy: { id: 'desc' }, take: page.limit + 1, include: ratingInclude }),
       db.ratingEntry.count({ where }),
       db.ratingEntry.findFirst({ where: { ...where, currentFor: { some: { userId, animeId } } }, include: ratingInclude }),
       db.libraryEntry.findUnique({ where: { userId_animeId: where } }),
+      db.animeList.findMany({ where: { userId, items: { some: { animeId } } }, select: { id: true }, orderBy: { id: 'asc' } }),
     ]);
     res.json({ ...pageResult(rows, total, page, ratingDto), watched: library?.watched ?? false,
       watchlist: library?.watchlist ?? false, favoritePosition: library?.favoritePosition ?? null,
-      currentRating: current ? ratingDto(current) : null });
+      currentRating: current ? ratingDto(current) : null, listIds: lists.map(list => String(list.id)) });
   });
   return router;
 }

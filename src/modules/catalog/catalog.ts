@@ -1,9 +1,9 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
-import { ApiError } from './errors';
+import { ApiError } from '../../shared/errors';
 import { catalogNetworkError } from './catalog-errors';
-import { animeIdSchema } from './validation';
+import { animeIdSchema } from '../../shared/validation';
 
 export const DEFAULT_CATALOG_URL = 'https://api.tenrai.org/v1';
 export function catalogBaseUrl(value: string) {
@@ -23,11 +23,15 @@ const remoteAnime = z.object({
   title_japanese: z.string().nullable().optional(),
   images: z.object({ jpg: remoteImages.optional(), webp: remoteImages.optional() }).optional(),
   synopsis: z.string().nullable().optional(), episodes: z.number().int().nullable().optional(),
+  duration: z.string().nullable().optional(),
+  studios: z.array(z.object({ name: z.string() })).optional(),
   year: z.number().int().nullable().optional(), season: z.string().nullable().optional(),
   genres: z.array(z.object({ mal_id: z.number().int(), name: z.string() })).default([]),
 });
 
 function normalize(value: z.infer<typeof remoteAnime>) {
+  const hours = Number(value.duration?.match(/(\d+)\s*hr/)?.[1] ?? 0);
+  const minutes = Number(value.duration?.match(/(\d+)\s*min/)?.[1] ?? 0);
   const imageUrl = [value.images?.jpg?.image_url, value.images?.webp?.image_url,
     value.images?.jpg?.large_image_url, value.images?.webp?.large_image_url]
     .find((url) => url != null && z.url({ protocol: /^https$/ }).safeParse(url).success);
@@ -36,13 +40,18 @@ function normalize(value: z.infer<typeof remoteAnime>) {
     japanese: value.title_japanese ?? null,
     imageUrl: imageUrl ?? null,
     synopsis: value.synopsis ?? null, episodes: value.episodes ?? null,
+    durationMinutes: hours || minutes ? hours * 60 + minutes : null,
+    studios: value.studios?.map(studio => studio.name) ?? [],
     year: value.year ?? null, season: value.season ?? null,
     genres: value.genres.map((genre) => ({ id: `mal:${genre.mal_id}`, name: genre.name })),
   };
 }
-export type AnimeMetadata = ReturnType<typeof normalize>;
+export type AnimeMetadata = Omit<ReturnType<typeof normalize>, 'durationMinutes' | 'studios'> &
+  Partial<Pick<ReturnType<typeof normalize>, 'durationMinutes' | 'studios'>>;
+export type CatalogFilters = { genres?: string[]; season?: string; year?: number };
 export interface Catalog {
   search(query: string, page: number): Promise<{ items: AnimeMetadata[]; nextPage: number | null }>;
+  browse?(query: string, page: number, filters: CatalogFilters): Promise<{ items: AnimeMetadata[]; nextPage: number | null }>;
   get(id: string): Promise<AnimeMetadata>;
 }
 
@@ -114,6 +123,19 @@ export class JikanCatalog implements Catalog {
     return { items: parsed.data.data.map(normalize), nextPage: parsed.data.pagination.has_next_page ? page + 1 : null };
   }
 
+  async browse(query: string, page: number, filters: CatalogFilters) {
+    const params = new URLSearchParams({ page: String(page), limit: '20', sfw: 'true' });
+    if (query) params.set('q', query);
+    // No enviar géneros múltiples como AND: la pantalla pide cualquiera (OR).
+    // Recorremos páginas del proveedor y filtramos metadatos en el servidor.
+    const schema = z.object({ data: z.array(remoteAnime), pagination: z.object({ has_next_page: z.boolean() }) });
+    const parsed = schema.parse(await this.request(`/anime?${params}`, value => schema.safeParse(value).success));
+    const items = parsed.data.map(normalize).filter(anime =>
+      (!filters.genres || anime.genres.some(genre => filters.genres!.includes(genre.id))) &&
+      (!filters.season || anime.season === filters.season) && (!filters.year || anime.year === filters.year));
+    return { items, nextPage: parsed.pagination.has_next_page ? page + 1 : null };
+  }
+
   async get(id: string) {
     animeIdSchema.parse(id);
     const schema = z.object({ data: remoteAnime }).refine((value) => `mal:${value.data.mal_id}` === id);
@@ -147,13 +169,29 @@ export async function animeDetail(db: PrismaClient, catalog: Catalog, id: string
       stale = true;
     }
   }
-  const [ratings, reviews, historyCount] = await db.$transaction([
-    db.ratingEntry.aggregate({ where: { animeId: id, currentFor: { some: { animeId: id } } }, _avg: { rating: true }, _count: true }),
-    db.publication.count({ where: { ratingEntry: { animeId: id } } }),
-    db.ratingEntry.count({ where: { animeId: id } }),
-  ]);
+  const [ratings, reviews, historyCount, watched, distribution] = await db.$transaction(async tx => {
+    const distribution = await tx.ratingEntry.groupBy({ by: ['rating'], where: { animeId: id, currentFor: { some: { animeId: id } } }, _count: true });
+    return [
+      await tx.ratingEntry.aggregate({ where: { animeId: id, currentFor: { some: { animeId: id } } }, _avg: { rating: true }, _count: true }),
+      await tx.publication.count({ where: { ratingEntry: { animeId: id } } }),
+      await tx.ratingEntry.count({ where: { animeId: id } }),
+      await tx.libraryEntry.count({ where: { animeId: id, watched: true } }), distribution,
+    ] as const;
+  });
   return { ...anime, metadataStale: stale, statistics: {
     averageRating: ratings._avg.rating, ratingCount: historyCount,
-    reviewCount: reviews, ratingUserCount: ratings._count,
+    reviewCount: reviews, ratingUserCount: ratings._count, watched,
+    distribution: Array.from({ length: 10 }, (_, index) => {
+      const rating = (index + 1) / 2;
+      const count = distribution.find(row => row.rating === rating)?._count ?? 0;
+      return { rating, count, percentage: ratings._count ? count / ratings._count * 100 : 0 };
+    }),
+    // Cinco barras como la ficha actual: (4,5], (3,4], ... (0,1].
+    distributionBands: Array.from({ length: 5 }, (_, index) => {
+      const stars = 5 - index;
+      const count = distribution.filter(row => row.rating > stars - 1 && row.rating <= stars)
+        .reduce((sum, row) => sum + row._count, 0);
+      return { stars, count, percentage: ratings._count ? count / ratings._count * 100 : 0 };
+    }),
   } };
 }

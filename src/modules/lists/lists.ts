@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { profileSelect, type Identity } from './auth';
-import { ensureAnime, type Catalog } from './catalog';
-import { ApiError } from './errors';
-import { fingerprint, operationKeySchema, replay, saveOperation } from './operations';
-import { pageFields, pageResult, readPage } from './pagination';
-import { animeIdSchema, resourceIdSchema, uniqueAnimeIds } from './validation';
+import { profileSelect, type Identity } from '../auth/auth';
+import { ensureAnime, type Catalog } from '../catalog/catalog';
+import { ApiError } from '../../shared/errors';
+import { fingerprint, operationKeySchema, replay, saveOperation } from '../../shared/operations';
+import { pageFields, pageResult, readPage } from '../../shared/pagination';
+import { animeIdSchema, resourceIdSchema, uniqueAnimeIds } from '../../shared/validation';
 
 export const listInclude = (userId: string) => ({
   user: { select: profileSelect },
@@ -34,9 +34,9 @@ export function listsRouter(db: PrismaClient, catalog: Catalog) {
   const router = Router();
   router.get('/lists', async (req, res) => {
     const { userId } = res.locals.identity as Identity;
-    const query = z.object({ ...pageFields, userId: z.string().min(1).max(100).optional(), animeId: animeIdSchema.optional() }).strict().parse(req.query);
-    const page = readPage(query, JSON.stringify(['lists', userId, query.userId ?? null, query.animeId ?? null]));
-    const where: Prisma.AnimeListWhereInput = { userId: query.userId, items: query.animeId ? { some: { animeId: query.animeId } } : undefined };
+    const query = z.object({ ...pageFields, userId: z.string().min(1).max(100).optional(), q: z.string().trim().max(100).default(''), animeId: animeIdSchema.optional() }).strict().parse(req.query);
+    const page = readPage(query, JSON.stringify(['lists', userId, query.userId ?? null, query.animeId ?? null, query.q]));
+    const where: Prisma.AnimeListWhereInput = { userId: query.userId, OR: query.q ? [{title:{contains:query.q}},{description:{contains:query.q}}] : undefined, items: query.animeId ? { some: { animeId: query.animeId } } : undefined };
     const [rows, total] = await db.$transaction([
       db.animeList.findMany({ where: { ...where, id: page.before ? { lt: page.before } : undefined },
         orderBy: { id: 'desc' }, take: page.limit + 1, include: listInclude(userId) }),

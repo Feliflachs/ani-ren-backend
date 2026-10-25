@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import type { Identity } from './auth';
-import { ApiError } from './errors';
-import { pageFields } from './pagination';
-import { genresOf } from './search';
-import { normalizeTag } from './validation';
-import { publicationDto, publicationInclude } from './serializers';
+import type { Identity } from '../auth/auth';
+import { ApiError } from '../../shared/errors';
+import { pageFields } from '../../shared/pagination';
+import { genresOf } from '../search/search';
+import { normalizeTag } from '../../shared/validation';
+import { publicationDto, publicationInclude } from '../../shared/serializers';
 
 // Catálogo guardado en Ani-Ren: no descarga el proveedor ni hace consultas por tarjeta.
 export function animeDiscoveryRouter(db: PrismaClient) {

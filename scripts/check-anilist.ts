@@ -1,6 +1,6 @@
-import { AniListExtras, ANILIST_URL } from '../src/anime-extras';
-import { ApiError } from '../src/errors';
-import { networkCodes } from '../src/catalog-errors';
+import { AniListExtras, ANILIST_URL } from '../src/modules/catalog/anime-extras';
+import { ApiError } from '../src/shared/errors';
+import { networkCodes } from '../src/modules/catalog/catalog-errors';
 
 async function main() {
   console.log(`Consultando ${ANILIST_URL}: Naruto (mal:20). No requiere backend ni escribe en SQLite.`);

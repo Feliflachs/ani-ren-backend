@@ -2,9 +2,9 @@
 
 Base de desarrollo: `http://localhost:3000/api`. JSON UTF-8. Todas las rutas requieren Bearer token salvo `/health`, `/auth/register` y `/auth/login`.
 
-Este archivo describe el código actual. Las operaciones futuras del [esquema conceptual](ESQUEMA_DATOS_Y_API.md) no están disponibles todavía.
+La referencia vigente del paso 2 es la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md). Este archivo conserva el contrato del núcleo y enlaza las reglas nuevas. Las operaciones futuras del [esquema conceptual](ESQUEMA_DATOS_Y_API.md) no están disponibles todavía.
 
-Catálogo externo: Tenrai reemplaza la API pública cerrada de Jikan, conservando formato y referencias `mal:ID`. Búsqueda, detalle y paginación reales verificados el 12/10/2026. `CATALOG_BASE_URL` configura el proveedor compatible. AniList entrega los extras por separado. Guía de conexión del frontend: [HANDOFF_FRONTEND.md](HANDOFF_FRONTEND.md).
+Catálogo externo: Tenrai reemplaza la API pública cerrada de Jikan, conservando formato y referencias `mal:ID`. Búsqueda, detalle y paginación reales verificados el 12/10/2026. `CATALOG_BASE_URL` configura el proveedor compatible. AniList entrega los extras por separado. Guía de conexión del frontend: [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md).
 
 ## Rutas
 
@@ -40,13 +40,13 @@ Integración para evaluación: aclarar la admisibilidad de Ani-Ren con el provee
 | GET /users/:id | ID real de usuario | `{ user }`, perfil, estadísticas, relación con lector y favoritos |
 | PATCH /me/profile | name?, bio? | `{ user }`; perfil básico confirmado, solo cuenta autenticada |
 | GET /me/library | collection=watched o watchlist (defecto watched), limit?, cursor? | `{ items, total, nextCursor }`; items con anime, watched, watchlist, favoritePosition |
-| PATCH /me/library/:animeId | watched=true?, watchlist=true/false?; al menos uno | `{ animeId, watched, watchlist, favoritePosition }`; no crea valoración |
+| PATCH /me/library/:animeId | watched=true/false?, watchlist=true/false?; al menos uno | `{ animeId, watched, watchlist, favoritePosition }`; no crea valoración |
 | GET /me/favorites | — | `{ items, total }`; items con anime y position, en orden, máximo 100 |
 | PUT /me/favorites | `{ animeIds: [...] }` | Reemplaza favoritos en ese orden; `{ items, total }` |
-| GET /me/anime/:animeId/activity | limit, cursor opcionales | `{ items, total, nextCursor, watched, watchlist, favoritePosition, currentRating }` |
-| POST /ratings | animeId, rating, watchedOn?, rewatched? | 201, `{ rating }`; requiere Idempotency-Key |
+| GET /me/anime/:animeId/activity | limit, cursor opcionales | `{ items, total, nextCursor, watched, watchlist, favoritePosition, currentRating, listIds }` |
+| POST /ratings | animeId, rating, watchedOn?, rewatched?, countryCode? | 201, `{ rating }`; requiere Idempotency-Key |
 | PATCH /ratings/:id | rating?, watchedOn?, rewatched? | `{ rating }`; solo autor y solo si no tiene review |
-| POST /reviews | animeId, rating, text, title?, spoiler?, watchedOn?, rewatched? | 201, `{ publication }`; requiere Idempotency-Key |
+| POST /reviews | animeId, rating, text, title?, spoiler?, watchedOn?, rewatched?, countryCode? | 201, `{ publication }`; requiere Idempotency-Key |
 | PATCH /reviews/:id | rating?, text?, title?, spoiler?, watchedOn?, rewatched? | `{ publication }`; ID de publicación, solo autor |
 | POST /posts | text, title?, spoiler?, animeIds? | 201, `{ publication }`; requiere Idempotency-Key; no crea voto ni visto |
 | PATCH /posts/:id | text?, title?, spoiler?, animeIds? | `{ publication }`; solo autor; animeIds reemplaza las menciones |
@@ -62,7 +62,7 @@ Integración para evaluación: aclarar la admisibilidad de Ani-Ren con el provee
 | GET /publications/:id/comments | limit?, cursor? | `{ items, total, nextCursor }`; recientes primero |
 | POST /publications/:id/comments | text | 201, `{ comment }`; requiere Idempotency-Key |
 | GET /discover | limit?, cursor? | Animes no vistos, estadísticas, Watchlist y hasta dos reviews por anime |
-| GET /feed | type=following o for-you obligatorio, limit?, cursor? | `{ items, total, nextCursor }`; Para ti agrega generatedAt y expiresAt |
+| GET /feed | type=following, for-you o trending obligatorio, limit?, cursor? | `{ items, total, nextCursor }`; Para ti agrega generatedAt y expiresAt |
 | POST /lists | title, animeIds, description?, ordered? | 201, `{ list }`; requiere Idempotency-Key |
 | GET /lists | userId?, animeId?, limit?, cursor? | `{ items, total, nextCursor }`; listas recientes primero |
 | GET /lists/:id | ID de lista | `{ list }` |
@@ -72,7 +72,7 @@ Integración para evaluación: aclarar la admisibilidad de Ani-Ren con el provee
 | GET /search | type=users/publications/lists, q?, genres?, season?, year?, limit?, cursor? | `{ type, items, total, nextCursor }`; ver filtros debajo |
 | GET /search | type=anime, q, page? | `{ type, items, nextPage }`; búsqueda global mediante catálogo |
 | GET /me/aura | Sin parámetros | `{ rulesVersion, statistics, rank, ranks, missions, rewards }` |
-| GET /me/missions | Sin parámetros | `{ rulesVersion, items, total, claimedIds }`; las cinco misiones completas, sin paginar |
+| GET /me/missions | Sin parámetros | `{ rulesVersion, items, total, claimedIds }`; familias de misiones por género y total, con seis etapas cada una, sin paginar |
 | PUT /me/missions/:id/claim | Sin cuerpo | `{ claim }`; comprueba objetivo y reclama una sola vez |
 | GET /ranking | scope=global/friends (defecto global), limit?, cursor? | `{ scope, metric, items, total, me, nextCursor }` |
 
@@ -106,9 +106,9 @@ Publicación: `id`, `kind` (review/post), `userId`, `author`, `animeId`, `rating
 - rewatched y spoiler: booleanos; false si se omiten al crear. PATCH conserva campos omitidos.
 - updatedAt empieza en null; una edición registra el instante y conserva createdAt.
 - PATCH exige algún campo editable. No se puede cambiar autor ni anime de una valoración/review existente. En posteos sí pueden reemplazarse las referencias de anime; `animeIds: []` las elimina.
-- Biblioteca permite marcar visto y agregar/quitar watchlist. Desmarcar visto, borrado de actividad y conversión de valoración en review quedan pendientes de sus reglas.
+- Biblioteca permite marcar/desmarcar visto y agregar/quitar watchlist. Desmarcar conserva historial, votos y recompensas reclamadas. Borrado de actividad y conversión de valoración en review quedan pendientes de sus reglas.
 - Watchlist, visto y favoritos son estados independientes. Marcar visto o valorar conserva la watchlist; quitar de watchlist no borra votos, vistos ni favoritos. Los favoritos no exigen ni generan un visto.
-- Favoritos: máximo 100 IDs distintos en orden; posiciones desde cero. `animeIds: []` vacía favoritos. Reemplazo atómico, sin modificar otros estados de biblioteca. Estas cotas y las de menciones son límites operativos iniciales.
+- Favoritos: máximo 4 IDs distintos en orden; posiciones desde cero. `animeIds: []` vacía favoritos. Reemplazo atómico, sin modificar otros estados de biblioteca. Estas cotas y las de menciones son límites operativos iniciales.
 - Listas: título recortado de 3–100 caracteres, descripción de 0–2000, entre 1 y 100 animes distintos. Se conserva el mínimo del editor actual: una lista publicada no queda vacía. `description` por defecto vacío y `ordered` false. PATCH conserva campos omitidos; `animeIds` reemplaza todo el contenido atómicamente y preserva likes y fecha original. Agregar animes a listas no marca vistos, no crea valoraciones ni modifica favoritos.
 
 La secuencia autoincremental determina el orden de inserción y la puntuación personal actual. Se usa como cursor estable de orden nuevo→antiguo, incluso cuando dos entradas comparten milisegundo. Cambiar una fecha de visto o editar una entrada antigua no cambia ese orden.
@@ -133,27 +133,7 @@ La consulta `/publications?animeId=...` encuentra reviews de ese anime y posteos
 
 ## Para ti: conversaciones según gustos
 
-`GET /feed?type=for-you` selecciona reviews y posteos de otras cuentas, incluyendo seguidos, animes vistos y conversaciones sin referencias. Excluye únicamente publicaciones propias. Para encontrar exclusivamente animes no vistos se usa `/discover`.
-
-Las señales iniciales conservan la lógica acordada del frontend:
-
-1. Géneros de vistos, favoritos y watchlist forman los intereses. Las estrellas por sí solas todavía no se interpretan como preferencia.
-2. Etiquetas de publicaciones a las que el lector dio like forman intereses adicionales; likes de listas no afectan esta versión del algoritmo.
-3. Cada candidato suma +3 si menciona un pendiente no visto, +1 por género coincidente y +1 por hashtag coincidente con géneros de interés o etiquetas gustadas. Se deduplican géneros/etiquetas. Todos los animes referenciados aportan géneros, incluidos los vistos.
-4. Se ordena por puntuación y después por creación (ID descendente). Se alternan autores cuando quedan alternativas; esto puede poner una publicación de menor afinidad antes que otra del autor recién mostrado.
-5. Sin afinidad se usa fecha y variedad de autores, manteniendo las mismas exclusiones. Si no hay candidatos, se devuelve vacío.
-
-Cada item conserva el formato de publicación y agrega `recommendation: { score, reasons: { inWatchlist, matchedGenres, matchedTags }, discoveryAnimeIds }`. Son motivos de selección, no estrellas ni votos del anime. El servidor no deduce qué conoce el usuario fuera de Ani-Ren: «nuevo» significa aquí no marcado como visto. Diferentes reviews del mismo anime pueden aparecer; no se fusionan sus opiniones.
-
-Paginación de Para ti:
-
-- La primera consulta sin cursor puntúa el conjunto elegible completo y conserva su orden en SQLite durante 20 minutos. No ordena solo la primera página.
-- Hay una selección activa por cuenta. Recargar sin cursor la reemplaza, también si se hace desde otra sesión de la misma cuenta. `generatedAt` y `expiresAt` permiten identificarla.
-- Continuar con `nextCursor` conserva orden incluso después de likes, nuevas publicaciones o reinicios del servidor. Nuevas señales/publicaciones entran al recargar desde el inicio. Cambiar `limit` no duplica items.
-- Seguir a un autor o marcar un anime visto no retira conversaciones de la selección. Los cuerpos e interacciones se leen actuales; puntajes/motivos corresponden a `generatedAt`, aunque luego se edite un texto.
-- `total` cuenta los miembros de esa selección que siguen siendo elegibles, incluidos los ya paginados; puede disminuir. No cuenta novedades posteriores a la selección. No es `items.length` ni el total histórico de la red.
-- Cursor de otra cuenta/tipo: 400. Selección vencida o reemplazada: 410 `FEED_EXPIRED`; el frontend debe descartar ese cursor y cargar la primera página, sin cerrar sesión.
-- Al crear una selección se limpian las vencidas; las restantes están acotadas a una por cuenta. No se consulta Jikan para recomendar contenido ya guardado.
+Regla confirmada el 25/10/2026: excluir publicaciones propias y de cuentas seguidas. +3 por watchlist, +1 por género de favoritos/watchlist y +1 por tag coincidente con géneros de interés o tags gustados. Alterna autores y pagina una selección de 20 minutos. Vistos solos no agregan afinidad; seguir a un autor lo retira de la selección. Ver la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md) para respuestas, cursores y Tendencia.
 
 ## Descubrir: animes nuevos con opiniones
 
@@ -167,55 +147,15 @@ Los datos se consultan en lotes por página, sin peticiones externas por tarjeta
 
 ## Búsqueda por categoría
 
-Para `users`, `publications` y `lists`, `q` es opcional (hasta 100 caracteres); vacío permite explorar la categoría. La búsqueda ignora mayúsculas y tildes, tratando caracteres como `%` literalmente.
-
-| Categoría | Texto consultado |
-| --- | --- |
-| users | Nombre, handle y biografía; devuelve perfiles básicos |
-| publications | Texto, título, autor y títulos de los animes referenciados |
-| lists | Título y descripción de la lista |
-
-En publicaciones, si `q` empieza por `#`, se busca una etiqueta exacta normalizada: `q=%23animacion` coincide con `#Animación`, pero no con `#Animaciones`. No hay que reindexar las reviews antiguas o editadas porque las etiquetas se extraen del texto actual.
-
-Filtros para publicaciones y listas: `genres=mal:22,mal:24` (máximo 10 IDs de género, coincide **cualquiera**); `season=winter|spring|summer|fall`; `year=2025` (1900–2200). Debe existir un mismo anime de la publicación/lista que cumpla los filtros combinados. No confundir ID de género con ID de anime, aunque compartan prefijo. En usuarios estos filtros se rechazan con 400 `INVALID_SEARCH_FILTER`.
-
-Los resultados locales usan `limit`/`cursor` y total de todas las coincidencias; listas/publicaciones por ID descendente, usuarios por ID de usuario descendente para un orden estable. El cursor queda ligado a cuenta, categoría, consulta y filtros. Las búsquedas locales pueden cambiar con ediciones; no usan la selección temporal de Para ti.
-
-`type=anime` conserva la búsqueda global existente: `q` de 2–100 y `page` desde 1, respuesta `nextPage`, sin inventar total del proveedor. Usa Tenrai mediante el adaptador compatible con Jikan v4. Los filtros avanzados de anime global aún no están conectados al adaptador: no enviar `genres`, `season`, `year`, `limit` o `cursor` en esa categoría. Las búsquedas locales sí funcionan sin proveedor.
-
-La implementación inicial escanea en servidor los textos y metadatos locales necesarios para normalizar tildes; solo envía una página al cliente. El armado de Para ti también evalúa el conjunto completo. Es una base para una comunidad pequeña, sin motor de búsqueda adicional: medir e indexar antes de crecer a muchos datos. No cargar toda esa información en los contextos del frontend.
+`/search?type=anime` admite texto opcional, géneros OR, temporada, año y page/nextPage. La API filtra cada página remota, guarda metadatos y conserva nextPage incluso en páginas sin coincidencias. No hay total global ficticio. Usuarios, publicaciones y listas conservan búsqueda local normalizada con limit/cursor/total; filtros de anime no se aplican a usuarios. Ver la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md).
 
 ## Aura, misiones y recompensas
 
-Reglas iniciales confirmadas el 12/10/2026, `rulesVersion: "1"`. Las misiones son acumulativas, sin período semanal, vencimiento ni puntos adicionales. Se consulta toda la biblioteca/actividad del usuario, no una página del historial. Biblioteca única por usuario/anime evita duplicar vistos por repetir puntuaciones.
-
-| ID | Objetivo | Recompensa |
-| --- | --- | --- |
-| romance | Dos animes distintos vistos del género Romance | Corazón de anime |
-| shonen | Tres animes distintos vistos del género Acción | Espíritu shonen |
-| generos | Cuatro IDs de género distintos en los animes vistos | Explorador |
-| reviews | Tres publicaciones de tipo review, incluso del mismo anime | Voz de la comunidad |
-| primera | Un anime visto | Primer capítulo |
-
-La misión `shonen` conserva el ID/nombre de pantalla, pero su criterio es **Acción**, no la demografía Shounen. Se reconocen los nombres Action/Acción del metadato normalizado; Romance se compara sin mayúsculas/tildes. Un anime con varios géneros suma uno a cada misión específica y sus géneros distintos a Explorador. Géneros ausentes no se inventan ni impiden contar un visto. Las temporadas conservan sus IDs separados.
-
-Las reviews repetidas aportan al objetivo de tres reviews; editar, puntuar sin texto y publicar un post común no lo incrementan. Vistos declarados sin review también cuentan. `statistics` devuelve watched, reviews, genres, watchlist y favorites. Sin actividad, todos son cero y el rango es Novato.
-
-Cada misión devuelve id, title, description, metric, total, rewardId, reward, icon, rawProgress, value, state, claimed y claimedAt. `rawProgress` es el total real; `value` se limita al objetivo para una barra. `state` es pending, in_progress o completed. Completar no reclama automáticamente: `claimed` es independiente.
-
-`PUT /me/missions/:id/claim` usa exclusivamente la sesión. No acepta userId, progreso, recompensa o puntos del cliente. Objetivo incompleto: 409 MISSION_INCOMPLETE. ID desconocido: 404 MISSION_NOT_FOUND. Una transacción comprueba elegibilidad y guarda la recompensa; una clave única usuario/misión impide duplicados. Repetir o enviar dos reclamos simultáneos devuelve el mismo claim, con la misma fecha; no requiere Idempotency-Key.
-
-`claim` y los elementos de `rewards` contienen missionId, rewardId, reward, rulesVersion y claimedAt. Se conserva lo otorgado incluso si después cambian metadatos y baja el progreso actual. Son desbloqueos persistentes, sin monedas ni efectos en vistos/rango. El código todavía no equipa decoradores de perfil. Cambiar la versión de reglas no habilita cobrar otra vez la misma misión; una misión nueva necesita otro ID.
+Versión 2: etapas 1/5/10/25/50/100 por género y total de animes distintos, recompensas 10/25/50/125/250/500 puntos. GET /me/aura devuelve points, availablePoints, estadísticas, rango, misiones y recompensas. PUT /me/missions/:id/claim valida progreso y guarda un único reclamo con sus puntos; devuelve { claim, aura }. No recibe puntaje del cliente. Los reclamos anteriores se conservan con cero puntos. Detalle y ejemplos en la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md).
 
 ## Rangos y ranking de usuarios
 
-Rangos según animes distintos vistos: Novato desde 0, Aprendiz desde 100, Experto desde 200, Maestro desde 300 y Leyenda desde 400. No dependen de likes, estrellas ni recompensas. `rank` devuelve name, index, watched, threshold, nextRank, nextThreshold, remaining y progress (0–1 dentro del tramo). Leyenda devuelve nextRank/nextThreshold null, remaining 0 y progress 1. Aura incluye además `ranks: [{ name, index, threshold, unlocked }]` para que la app no duplique los umbrales. El perfil `GET /users/:id` también devuelve el rank calculado de esa persona, sin revelar sus reclamos privados.
-
-`GET /ranking` clasifica por `metric: "distinct_watched_anime"`. `scope=global` incluye todas las cuentas; `scope=friends` incluye al lector y sus seguimientos **recíprocos**. No basta seguir en una sola dirección. Incluye usuarios con cero vistos.
-
-Cada item contiene user (perfil básico sin credenciales), watched, position y rank. Los empates comparten posición: 1, 2, 2, 4. Dentro de un empate se ordena por ID de usuario ascendente para paginar sin repetir; no se desempata por likes ni antigüedad. `me` informa posición, vistos y rango del lector dentro del ámbito elegido, aunque esté fuera de la página cargada; total cuenta todo ese ámbito.
-
-Usa limit/cursor como los otros listados, vinculando el cursor a cuenta y ámbito. Es una clasificación actual, sin ventana temporal ni selección guardada: si cambian vistos o amistades durante la navegación, refrescar desde la primera página. El servidor calcula los conteos de biblioteca y posiciones del conjunto antes de recortar la página. La versión inicial está pensada para una comunidad pequeña; optimizar consultas antes de grandes volúmenes.
+Rangos confirmados: Novato 0, Aprendiz 100, Experto 500, Maestro 1500 y Leyenda 5000 puntos reclamados. GET /ranking usa metric=claimed_mission_points y scope global/friends; devuelve puntos, vistos, posición, rango y la posición propia. Empates comparten puesto; friends incluye amistad recíproca y cuenta propia. Ver la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md).
 
 ## Promedios y páginas
 
@@ -223,7 +163,7 @@ El puntaje global utiliza la valoración más reciente realizada o modificada po
 
 `ratingCount` cuenta entradas históricas; `ratingUserCount` cuenta votos vigentes/personas y es el denominador del promedio; `reviewCount` cuenta reviews. Sin votos, `averageRating` es null. La migración conserva como voto inicial la última entrada creada de cada usuario/anime: los datos antiguos no permiten distinguir cambios de estrellas de otras ediciones.
 
-Los listados paginados usan limit=20 por defecto, máximo 50, y cursor opaco ligado a la consulta y sus filtros; los feeds y biblioteca también lo ligan a la cuenta. Reutilizar el cursor fuera de ese ámbito devuelve 400. `total` representa todas las coincidencias actuales; `items.length` representa solo esa página. Sin más resultados, nextCursor es null. Excepto las selecciones de Para ti y Descubrir descritas arriba, no son instantáneas: cambiar relaciones o referencias puede cambiar coincidencias entre páginas. Favoritos devuelve la colección completa acotada a 100. Jikan usa page/nextPage en lugar de cursor, según su contrato.
+Los listados paginados usan limit=20 por defecto, máximo 50, y cursor opaco ligado a la consulta y sus filtros; los feeds y biblioteca también lo ligan a la cuenta. Reutilizar el cursor fuera de ese ámbito devuelve 400. `total` representa todas las coincidencias actuales; `items.length` representa solo esa página. Sin más resultados, nextCursor es null. Tendencia, tops y consultas nuevas de perfil/biblioteca también usan selecciones de 20 minutos (ver guía). Las consultas restantes no son instantáneas: cambiar relaciones o referencias puede cambiar coincidencias entre páginas. Favoritos devuelve la colección completa acotada a cuatro para nuevas selecciones. Jikan usa page/nextPage en lugar de cursor, según su contrato.
 
 El resumen de anime distingue `averageRating`, `ratingCount`, `reviewCount` y `ratingUserCount`. Una página del feed nunca se usa para calcular esos totales.
 
@@ -245,3 +185,7 @@ Formato: `{ "error": { "code": "...", "message": "...", "fields": [...] } }`. fi
 | 502/503 | CATALOG_ERROR, CATALOG_INVALID_RESPONSE, CATALOG_UNAVAILABLE, CATALOG_TIMEOUT, CATALOG_DNS_ERROR, CATALOG_TLS_ERROR, CATALOG_BUSY, CATALOG_RATE_LIMIT |
 
 El frontend debe distinguir una sesión vencida de una falta de conexión. Guardar el borrador ante fallo, mostrar el error y ofrecer reintento. No mostrar éxito antes de recibir confirmación del servidor.
+
+## Ampliaciones del 25/10/2026
+
+La [guía vigente](docs/GUIA_INTEGRACION_FRONTEND.md) documenta /explore, /explore/tops, /explore/map, /explore/countries/:country, sus reviews, /users/:id/publications, /users/:id/library, countryCode opcional en POST de valoraciones/reviews, avatarUrl en perfiles, distribución de estrellas, duración/estudios y listIds en actividad. Las cuatro migraciones nuevas conservan datos históricos.

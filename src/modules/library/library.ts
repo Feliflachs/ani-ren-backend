@@ -1,10 +1,11 @@
+import { awardCompletedMissions } from '../aura/aura.service';
 import { Router } from 'express';
 import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import type { Identity } from './auth';
-import { ensureAnime, type Catalog } from './catalog';
-import { pageFields, pageResult, readPage } from './pagination';
-import { animeIdSchema, uniqueAnimeIds } from './validation';
+import type { Identity } from '../auth/auth';
+import { ensureAnime, type Catalog } from '../catalog/catalog';
+import { pageFields, pageResult, readPage } from '../../shared/pagination';
+import { animeIdSchema, uniqueAnimeIds } from '../../shared/validation';
 
 export function libraryRouter(db: PrismaClient, catalog: Catalog) {
   const router = Router();
@@ -24,14 +25,18 @@ export function libraryRouter(db: PrismaClient, catalog: Catalog) {
   });
   router.patch('/me/library/:animeId', async (req, res) => {
     const animeId = animeIdSchema.parse(req.params.animeId);
-    // Desmarcar visto continúa pendiente de su regla de producto.
-    const changes = z.object({ watched: z.literal(true).optional(), watchlist: z.boolean().optional() }).strict()
+    // Quitar de la colección conserva historial, votos y recompensas ya reclamadas.
+    const changes = z.object({ watched: z.boolean().optional(), watchlist: z.boolean().optional() }).strict()
       .refine((value) => Object.keys(value).length > 0, 'Indicá un cambio.').parse(req.body);
     const { userId } = res.locals.identity as Identity;
     await ensureAnime(db, catalog, animeId);
-    const entry = await db.libraryEntry.upsert({
-      where: { userId_animeId: { userId, animeId } },
-      create: { userId, animeId, ...changes }, update: changes,
+    const entry = await db.$transaction(async tx => {
+      const updated = await tx.libraryEntry.upsert({
+        where: { userId_animeId: { userId, animeId } },
+        create: { userId, animeId, ...changes }, update: changes,
+      });
+      if (changes.watched === true) await awardCompletedMissions(tx, userId);
+      return updated;
     });
     res.json({ animeId: entry.animeId, watched: entry.watched, watchlist: entry.watchlist,
       favoritePosition: entry.favoritePosition });
@@ -43,7 +48,7 @@ export function libraryRouter(db: PrismaClient, catalog: Catalog) {
     res.json({ items: rows.map((row) => ({ anime: row.anime, position: row.favoritePosition })), total: rows.length });
   });
   router.put('/me/favorites', async (req, res) => {
-    const { animeIds } = z.object({ animeIds: uniqueAnimeIds(100) }).strict().parse(req.body);
+    const { animeIds } = z.object({ animeIds: uniqueAnimeIds(4) }).strict().parse(req.body);
     const { userId } = res.locals.identity as Identity;
     for (const animeId of animeIds) await ensureAnime(db, catalog, animeId);
     const rows = await db.$transaction(async (tx) => {

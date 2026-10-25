@@ -1,4 +1,4 @@
-> Actualización 18/10/2026: las reglas vigentes de puntuación, Para ti y Descubrir están en API.md y README.md. Un voto vigente por persona; editar estrellas actualiza ese voto. Para ti incluye vistos y seguidos; Descubrir agrupa solo animes no vistos. El frontend integrado está en feature/integracion-backend. Las notas históricas que contradigan estas reglas quedan reemplazadas.
+> Documento histórico de la integración anterior. Para la etapa del 25/10/2026 leer la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md) y la [auditoría](docs/AUDITORIA_FRONT_BACK.md). Las referencias a ramas anteriores, cinco misiones, rangos por vistos o inclusión de seguidos en Para ti ya no son vigentes.
 
 # Ani-Ren: integrar el frontend con el backend local
 

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { JikanCatalog, catalogBaseUrl } from '../src/catalog';
-import { ApiError } from '../src/errors';
-import { networkCodes } from '../src/catalog-errors';
+import { JikanCatalog, catalogBaseUrl } from '../src/modules/catalog/catalog';
+import { ApiError } from '../src/shared/errors';
+import { networkCodes } from '../src/modules/catalog/catalog-errors';
 
 test('proveedor configurable conserva contrato e identidad MAL', async () => {
   const catalog = new JikanCatalog(async (url) => {

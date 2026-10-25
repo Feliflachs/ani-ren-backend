@@ -6,9 +6,9 @@ import path from 'node:path';
 import type { Server } from 'node:http';
 import { PrismaClient } from '@prisma/client';
 import { createApp } from '../src/app';
-import type { AnimeMetadata, Catalog } from '../src/catalog';
-import { ApiError } from '../src/errors';
-import { hashToken } from '../src/security';
+import type { AnimeMetadata, Catalog } from '../src/modules/catalog/catalog';
+import { ApiError } from '../src/shared/errors';
+import { hashToken } from '../src/modules/auth/security';
 
 const testRoot = path.resolve('.test-data');
 let directory: string;
@@ -127,7 +127,11 @@ test('valorar varias veces cambia el promedio, no duplica vistos ni inventa revi
   assert.equal(second.body.publication.rewatched, true);
   assert.deepEqual(second.body.publication.tags, ['naruto']);
   const detail = await call('/anime/mal:20', { token: bob.token });
-  assert.deepEqual(detail.body.anime.statistics, { averageRating: 4.5, ratingCount: 2, reviewCount: 1, ratingUserCount: 1 });
+  const { distribution, distributionBands, watched, ...statistics } = detail.body.anime.statistics;
+  assert.deepEqual(statistics, { averageRating: 4.5, ratingCount: 2, reviewCount: 1, ratingUserCount: 1 });
+  assert.equal(watched, 1);
+  assert.equal(distribution.find((row: any) => row.rating === 4.5).count, 1);
+  assert.equal(distributionBands.length, 5); assert.equal(distributionBands[0].percentage, 100);
   const activity = await call('/me/anime/mal:20/activity', { token: alice.token });
   assert.equal(activity.body.currentRating.rating, 4.5);
   assert.equal(activity.body.total, 2);
@@ -245,7 +249,8 @@ test('visto sin review y temporadas diferentes conservan IDs independientes', as
   assert.deepEqual(library.items.map((item: { anime: { id: string } }) => item.anime.id).sort(), ['mal:100', 'mal:101']);
   assert.equal((await call(`/publications?userId=${bob.user.id}`, { token: alice.token })).body.total, 0);
   assert.equal((await call('/anime/mal:100', { token: bob.token })).body.anime.statistics.averageRating, null);
-  assert.equal((await call('/me/library/mal:100', { method: 'PATCH', token: bob.token, body: { watched: false } })).status, 400);
+  assert.equal((await call('/me/library/mal:100', { method: 'PATCH', token: bob.token, body: { watched: false } })).status, 200);
+  assert.equal((await call('/me/library', { token: bob.token })).body.total, 1);
 });
 
 test('un proveedor caído no pierde reviews; metadatos anteriores se identifican como desactualizados', async () => {

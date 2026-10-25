@@ -14,6 +14,7 @@ model User {
   passwordHash     String
   name             String
   bio              String         @default("")
+  avatarUrl        String?
   createdAt        DateTime       @default(now())
   sessions         Session[]
   library          LibraryEntry[]
@@ -29,6 +30,7 @@ model User {
   feedSnapshot     FeedSnapshot?
   discoverySnapshot DiscoverySnapshot?
   missionClaims    MissionClaim[]
+  querySnapshots   QuerySnapshot[]
 }
 
 model Session {
@@ -51,6 +53,8 @@ model Anime {
   imageUrl      String?
   synopsis      String?
   episodes      Int?
+  durationMinutes Int?
+  studios       Json           @default("[]")
   year          Int?
   season        String?
   genres        Json
@@ -87,6 +91,7 @@ model RatingEntry {
   rating      Float
   watchedOn   String?
   rewatched   Boolean      @default(false)
+  countryCode String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime?
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -96,6 +101,7 @@ model RatingEntry {
 
   @@index([userId, animeId, id])
   @@index([animeId])
+  @@index([countryCode, createdAt, animeId])
 }
 
 // Las reviews tienen valoración; los posteos solo texto y referencias opcionales.
@@ -251,6 +257,7 @@ model MissionClaim {
   rewardId     String
   rewardName   String
   rulesVersion String
+  points       Int      @default(0)
   claimedAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
@@ -264,5 +271,19 @@ model DiscoverySnapshot {
   createdAt DateTime @default(now())
   expiresAt DateTime
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+
+// Páginas estables para rankings y selecciones calculadas por el servidor.
+model QuerySnapshot {
+  id        String   @id @default(cuid())
+  userId    String
+  scope     String
+  items     Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scope])
   @@index([expiresAt])
 }

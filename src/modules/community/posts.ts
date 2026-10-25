@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import type { Identity } from './auth';
-import { ensureAnime, type Catalog } from './catalog';
-import { ApiError } from './errors';
-import { fingerprint, operationKeySchema, replay, saveOperation } from './operations';
-import { publicationDto, publicationInclude } from './serializers';
-import { uniqueAnimeIds, resourceIdSchema } from './validation';
+import type { Identity } from '../auth/auth';
+import { ensureAnime, type Catalog } from '../catalog/catalog';
+import { ApiError } from '../../shared/errors';
+import { fingerprint, operationKeySchema, replay, saveOperation } from '../../shared/operations';
+import { publicationDto, publicationInclude } from '../../shared/serializers';
+import { uniqueAnimeIds, resourceIdSchema } from '../../shared/validation';
 
 const postFields = {
   text: z.string().trim().min(3).max(2000),

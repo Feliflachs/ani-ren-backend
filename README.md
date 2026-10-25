@@ -2,6 +2,12 @@
 
 API de Ani-Ren para actividad, comunidad, biblioteca y descubrimiento, implementada con Express, TypeScript, Prisma y SQLite. Sigue el recorrido de clase: Expo → HTTP → Express → Prisma → SQLite.
 
+## Nueva integración: punto de entrada
+
+El [mapa del backend](docs/MAPA_BACKEND.md) describe las carpetas, responsabilidades, rutas, pruebas y convenciones para seguir programando.
+
+La nueva integración se trabaja en `implementacion-front` (backend) y `nueva-integracion-back` (app). El paso 1 reorganiza el backend conservando su comportamiento. El paso 2 está documentado en la [auditoría](docs/AUDITORIA_FRONT_BACK.md) y la [guía de integración](docs/GUIA_INTEGRACION_FRONTEND.md), con sus contratos y pendientes explícitos. La integración visualmente idéntica de la app corresponde al paso 3. Los documentos de la integración anterior se mantienen como antecedentes para revisar.
+
 ## Estado actual
 
 Implementado y probado mediante HTTP y una base SQLite real:
@@ -19,11 +25,12 @@ Implementado y probado mediante HTTP y una base SQLite real:
 - Feed cronológico de cuentas seguidas y consultas por autor, anime y tipo de publicación.
 - Listas personales con orden, edición propia y likes independientes.
 - Búsqueda por categoría; usuarios, publicaciones y listas sin distinguir tildes, etiquetas exactas y filtros locales.
-- Para ti: conversaciones según vistos, favoritos, Watchlist y etiquetas gustadas, incluyendo cuentas seguidas. Descubrir: animes no vistos con hasta dos reviews de autores distintos.
-- Aura: cinco misiones acumulativas, progreso desde toda la actividad y recompensas únicas persistentes.
-- Rangos cada 100 animes distintos vistos y ranking de usuarios global/amigos con empates.
+- Para ti excluye cuentas propias y seguidas, con afinidad de favoritos/watchlist y hashtags. Descubrir recomienda animes no vistos. Tendencia ordena publicaciones por likes y comentarios.
+- Aura: misiones por género y totales en etapas de 1/5/10/25/50/100, con puntos reclamables una vez por etapa.
+- Rangos por puntos acumulados: 0/100/500/1500/5000; ranking global/amigos con empates.
+- Explorar: tops temporales, mapa por país y anime, estadísticas reales e intensidades para el mapa existente.
 
-El frontend está integrado en `ani-ren-app/feature/integracion-backend`; `context` conserva la referencia visual histórica. La prueba en teléfono físico sigue pendiente. No hay todavía Tendencia, mapa remoto, subida de imágenes ni equipamiento de decoradores. La búsqueda global usa Tenrai con conectividad verificada; no incorpora filtros avanzados. Comunidad, listas, descubrimiento y Aura pueden funcionar con los animes ya guardados.
+La integración anterior se trabajó en `ani-ren-app/feature/integracion-backend`; `context` conservaba la referencia visual histórica. Esto no describe el estado de la nueva rama `nueva-integracion-back`, cuya integración sigue pendiente. La prueba en teléfono físico sigue pendiente. Están pendientes la subida binaria de imágenes y las reglas/equipamiento de decoradores. La API ya guarda avatarUrl, sirve datos del mapa y Tendencia y permite filtrar páginas del catálogo por géneros, temporada y año. Comunidad, listas, descubrimiento y Aura pueden funcionar con los animes ya guardados.
 
 La API requiere sesión salvo registro, login y salud. No se habilitaron aún enlaces públicos sin sesión.
 
@@ -68,20 +75,20 @@ En un teléfono físico, la URL del servidor debe usar la IP local de la computa
 | --- | --- |
 | `src/index.ts` | Arranque, conexión y cierre del servidor |
 | `src/app.ts` | Express, CORS, límites y montaje de rutas |
-| `src/auth.ts`, `src/security.ts` | Usuarios, hash de contraseñas, sesión y autoría |
-| `src/catalog.ts` | Jikan, referencias `mal:ID`, metadatos y promedio propio |
-| `src/activity.ts` | Crear/editar valoraciones y reviews de forma transaccional |
-| `src/reads.ts` | Catálogo, consultas de publicaciones e historial personal |
-| `src/posts.ts` | Crear/editar posteos y referencias explícitas de anime |
-| `src/social.ts` | Perfiles, relaciones, likes, comentarios y feed Siguiendo |
-| `src/library.ts` | Vistos, watchlist y reemplazo ordenado de favoritos |
-| `src/lists.ts` | Listas, orden, permisos y likes |
-| `src/search.ts` | Búsqueda por categoría, normalización y filtros locales |
-| `src/discovery.ts` | Selección de Para ti, afinidad, exclusiones y páginas persistentes |
-| `src/aura.ts` | Reglas de misiones/rangos, progreso, reclamos únicos y ranking de usuarios |
-| `src/operations.ts` | Recuperar el resultado de un POST reintentado |
-| `src/validation.ts`, `src/errors.ts` | Validación y errores uniformes |
-| `src/pagination.ts`, `src/serializers.ts` | Páginas y respuestas para el frontend |
+| `src/modules/auth/auth.ts`, `src/modules/auth/security.ts` | Usuarios, hash de contraseñas, sesión y autoría |
+| `src/modules/catalog/catalog.ts` | Jikan, referencias `mal:ID`, metadatos y promedio propio |
+| `src/modules/activity/activity.ts` | Crear/editar valoraciones y reviews de forma transaccional |
+| `src/modules/activity/reads.ts` | Catálogo, consultas de publicaciones e historial personal |
+| `src/modules/community/posts.ts` | Crear/editar posteos y referencias explícitas de anime |
+| `src/modules/community/social.ts` | Perfiles, relaciones, likes, comentarios y feed Siguiendo |
+| `src/modules/library/library.ts` | Vistos, watchlist y reemplazo ordenado de favoritos |
+| `src/modules/lists/lists.ts` | Listas, orden, permisos y likes |
+| `src/modules/search/search.ts` | Búsqueda por categoría, normalización y filtros locales |
+| `src/modules/discovery/discovery.ts` | Selección de Para ti, afinidad, exclusiones y páginas persistentes |
+| `src/modules/aura/aura.ts` | Reglas de misiones/rangos, progreso, reclamos únicos y ranking de usuarios |
+| `src/shared/operations.ts` | Recuperar el resultado de un POST reintentado |
+| `src/shared/validation.ts`, `src/shared/errors.ts` | Validación y errores uniformes |
+| `src/shared/pagination.ts`, `src/shared/serializers.ts` | Páginas y respuestas para el frontend |
 | `prisma/schema.prisma` | Modelos y relaciones implementadas |
 | `prisma/migrations/` | Historia reproducible de cambios de base |
 | `tests/` | Pruebas HTTP, SQLite y adaptador de catálogo |
@@ -224,18 +231,18 @@ npm.cmd run build
 npm.cmd test
 ```
 
-Las 42 pruebas crean y eliminan bases aisladas dentro de `.test-data/`, aplican migraciones reales y usan sesiones HTTP independientes. No modifican `prisma/dev.db`. Cubren actividad, autoría, promedio, paginación, sesiones, catálogo controlado, relaciones, interacciones por publicación, biblioteca, listas, búsqueda, Para ti y Aura. Incluyen reclamos simultáneos, vistos distintos, rangos, ranking, proveedor caído, reinicios, migración con datos previos, permisos, reintentos y rollback. Los mensajes de error interno durante las pruebas de rollback son intencionales.
+Las 59 pruebas crean y eliminan bases aisladas dentro de `.test-data/`, aplican migraciones reales y usan sesiones HTTP independientes. No modifican `prisma/dev.db`. Cubren actividad, autoría, promedio, paginación, sesiones, catálogo controlado, relaciones, interacciones por publicación, biblioteca, listas, búsqueda, Para ti y Aura. Incluyen reclamos simultáneos, vistos distintos, rangos, ranking, proveedor caído, reinicios, migración con datos previos, permisos, reintentos y rollback. Los mensajes de error interno durante las pruebas de rollback son intencionales.
 
-Para probar desde Expo: conectar sus contextos, búsquedas, feeds, Aura y ranking con el contrato de API.md. Próximos bloques: países/mapa, imágenes y avatares, decoradores equipables y Tendencia, con sus reglas pendientes. Retomar Jikan para buscar/importar animes nuevos. No se migraron datos demo del frontend ni se hicieron commits, push o despliegues.
+Para probar desde Expo seguir la [guía de integración](docs/GUIA_INTEGRACION_FRONTEND.md). El frontend no fue modificado, los datos de demo no fueron migrados y no se hicieron commits, push o despliegues.
 
-Las reglas iniciales de Aura se confirmaron el 12/10/2026: cada review nueva cuenta para la misión de reviews aunque repita anime; las misiones de vistos cuentan IDs distintos. Rangos en 0/100/200/300/400 vistos; recompensas únicas sin puntos. `GET /api/me/aura` consulta el estado y `PUT /api/me/missions/:id/claim` reclama con sesión, sin cuerpo. Los desbloqueos se conservan tras reiniciar; no se activan desde números enviados por la app.
+Las reglas de Aura v2 se confirmaron el 25/10/2026: etapas de 1/5/10/25/50/100 animes distintos, con 10/25/50/125/250/500 puntos, y rangos en 0/100/500/1500/5000 puntos. El backend conserva cada recompensa otorgada y no acepta puntos enviados por el cliente. Los reclamos v1 sobreviven con cero puntos retroactivos.
 
 Para ti recomienda contenido ya publicado en Ani-Ren; una comunidad vacía devuelve un feed vacío. Selecciona todo el conjunto elegible antes de paginar y mantiene el orden durante 20 minutos. La búsqueda local recorre textos en servidor para normalizar tildes y devuelve solo una página. Estas implementaciones son para una comunidad inicial: medir e indexar antes de escalar. Los detalles de señales, exclusiones, cursores y límites están en API.md.
 
-## Cambios de producto del 18/10/2026
+## Historial de votos y descubrimiento
 
 El puntaje global utiliza la valoración más reciente realizada o modificada por cada usuario. Crear una valoración o cambiar sus estrellas actualiza un voto vigente por persona/anime. Editar solamente texto u otros campos, o reenviar las mismas estrellas, no cambia el voto. El promedio es una media simple de votos vigentes. Las reviews anteriores permanecen en el historial con sus interacciones.
 
 La migración `202610180001_current_rating` agrega la referencia al voto vigente sin borrar entradas. Para registros previos conserva la última entrada creada: no se puede inferir si una edición histórica cambió estrellas. Agrega también las selecciones de Descubrir.
 
-Para ti admite vistos, seguidos y posteos sin menciones, conservando afinidad y variedad de autores. Descubrir (`GET /discover`) muestra animes guardados no vistos, una tarjeta por anime y hasta dos reviews de autores distintos. Explorar/búsqueda no excluye vistos. El contrato actualizado está en API.md; estas reglas reemplazan las notas anteriores de planificación.
+Desde el 25/10/2026 Para ti excluye publicaciones propias y de cuentas seguidas. Descubrir (`GET /discover`) muestra animes guardados no vistos, una tarjeta por anime y hasta dos reviews de autores distintos. Explorar/búsqueda no excluye vistos. La [guía nueva](docs/GUIA_INTEGRACION_FRONTEND.md) reemplaza los criterios históricos.

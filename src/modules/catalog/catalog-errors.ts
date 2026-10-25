@@ -1,4 +1,4 @@
-import { ApiError } from './errors';
+import { ApiError } from '../../shared/errors';
 
 // fetch suele envolver el error de red en cause, y a veces en AggregateError.
 // Extraer solo códigos: no imprimir URLs de proxy, cabeceras ni mensajes arbitrarios.

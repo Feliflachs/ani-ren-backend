@@ -1,12 +1,13 @@
+import { awardCompletedMissions } from '../aura/aura.service';
 import { Router } from 'express';
 import type { PrismaClient } from '@prisma/client';
-import type { Catalog } from './catalog';
-import { ensureAnime } from './catalog';
-import type { Identity } from './auth';
-import { ApiError } from './errors';
-import { activitySchemas, resourceIdSchema } from './validation';
-import { fingerprint, operationKeySchema, replay, saveOperation } from './operations';
-import { publicationDto, publicationInclude, ratingDto, ratingInclude } from './serializers';
+import type { Catalog } from '../catalog/catalog';
+import { ensureAnime } from '../catalog/catalog';
+import type { Identity } from '../auth/auth';
+import { ApiError } from '../../shared/errors';
+import { activitySchemas, resourceIdSchema } from '../../shared/validation';
+import { fingerprint, operationKeySchema, replay, saveOperation } from '../../shared/operations';
+import { publicationDto, publicationInclude, ratingDto, ratingInclude } from '../../shared/serializers';
 
 export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: string) {
   const router = Router();
@@ -28,6 +29,7 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
         create: { userId, animeId: data.animeId, watched: true, currentRatingId: rating.id },
         update: { watched: true, currentRatingId: rating.id },
       });
+      await awardCompletedMissions(tx, userId);
       return { rating: ratingDto(rating) };
     });
     res.status(201).json(response);
@@ -46,7 +48,7 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
     const response = await saveOperation(db, userId, key, hash, async (tx) => {
       const rating = await tx.ratingEntry.create({ data: {
         userId, animeId: data.animeId, rating: data.rating,
-        watchedOn: data.watchedOn, rewatched: data.rewatched,
+        watchedOn: data.watchedOn, rewatched: data.rewatched, countryCode: data.countryCode,
       } });
       const publication = await tx.publication.create({ data: {
         userId, ratingEntryId: rating.id, text: data.text, title: data.title, spoiler: data.spoiler,
@@ -56,6 +58,7 @@ export function activityRouter(db: PrismaClient, catalog: Catalog, timeZone: str
         create: { userId, animeId: data.animeId, watched: true, currentRatingId: rating.id },
         update: { watched: true, currentRatingId: rating.id },
       });
+      await awardCompletedMissions(tx, userId);
       return { publication: publicationDto(publication) };
     });
     res.status(201).json(response);

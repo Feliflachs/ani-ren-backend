@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { profileSelect } from './auth';
+import { profileSelect } from '../modules/auth/auth';
 import { extractTags } from './validation';
 
 // Solo traer el like del lector, no todas las personas que dieron like.
@@ -37,7 +37,7 @@ type RatingWithPublication = Prisma.RatingEntryGetPayload<{ include: typeof rati
 export function ratingDto(row: RatingWithPublication) {
   return {
     id: String(row.id), userId: row.userId, animeId: row.animeId, rating: row.rating,
-    watchedOn: row.watchedOn, rewatched: row.rewatched,
+    watchedOn: row.watchedOn, rewatched: row.rewatched, countryCode: row.countryCode,
     publicationId: row.publication ? String(row.publication.id) : null,
     createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt?.toISOString() ?? null,
   };

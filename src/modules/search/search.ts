@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { profileSelect, type Identity } from './auth';
-import type { Catalog } from './catalog';
-import { ApiError } from './errors';
-import { listDto, listInclude } from './lists';
-import { pageFields } from './pagination';
-import { publicationDto, publicationInclude } from './serializers';
-import { animeIdSchema, extractTags, normalizeTag } from './validation';
+import { profileSelect, type Identity } from '../auth/auth';
+import type { Catalog } from '../catalog/catalog';
+import { ApiError } from '../../shared/errors';
+import { listDto, listInclude } from '../lists/lists';
+import { pageFields } from '../../shared/pagination';
+import { publicationDto, publicationInclude } from '../../shared/serializers';
+import { animeIdSchema, extractTags, normalizeTag } from '../../shared/validation';
 
 export const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export function genresOf(value: Prisma.JsonValue): { id: string; name: string }[] {
@@ -54,9 +54,15 @@ export function searchRouter(db: PrismaClient, catalog: Catalog) {
     const { userId } = res.locals.identity as Identity;
     if (req.query.type === 'anime') {
       // El catálogo global mantiene el contrato page/nextPage del adaptador.
-      const query = z.object({ type: z.literal('anime'), q: z.string().trim().min(2).max(100),
+      const query = z.object({ ...filters, type: z.literal('anime'), q: z.string().trim().max(100).default(''),
         page: z.string().regex(/^[1-9]\d{0,3}$/).transform(Number).default(1) }).strict().parse(req.query);
-      res.json({ type: 'anime', ...await catalog.search(query.q, query.page) });
+      const filtered = !!(query.genres || query.season || query.year || !query.q);
+      if (filtered && !catalog.browse) throw new ApiError(503, 'CATALOG_FILTERS_UNAVAILABLE', 'Este proveedor no permite explorar el catálogo.');
+      const page = filtered ? await catalog.browse!(query.q, query.page, query) : await catalog.search(query.q, query.page);
+      // Buscar hidrata el catálogo local, pero no crea vistos, votos ni actividad.
+      await db.$transaction(page.items.map(anime => db.anime.upsert({ where: { id: anime.id }, create: anime,
+        update: { ...anime, fetchedAt: new Date() } })));
+      res.json({ type: 'anime', source: 'catalog', ...page });
       return;
     }
     const query = z.object({ ...pageFields, ...filters, type: z.enum(['users', 'publications', 'lists']),

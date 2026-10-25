@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
-import { catalogBaseUrl, DEFAULT_CATALOG_URL } from './catalog';
+import { catalogBaseUrl, DEFAULT_CATALOG_URL } from '../modules/catalog/catalog';
 
 const environment = z.object({
   DATABASE_URL: z.string().startsWith('file:').default('file:./dev.db'),
