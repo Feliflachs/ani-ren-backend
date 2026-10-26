@@ -202,3 +202,19 @@ El paso 2 no modifica la app ni sus dependencias. Esta guía y el cliente de eje
 ### Recompensas automáticas (25/10/2026)
 
 Ratings, reviews y marcar visto acreditan todas las etapas alcanzadas dentro de la misma transacción. El inicio del servidor y las consultas de Aura reconcilian objetivos completos anteriores sin reclamar. Los puntos existentes no se modifican; quitar/reagregar vistos y reintentar una escritura no vuelven a premiar una etapa. `PUT /me/missions/:id/claim` se mantiene por compatibilidad, pero el frontend no debe mostrar un botón de reclamo. Usar `featuredMissionIds` para destacadas y `missions` completo para el historial y filtros.
+
+## Disponibilidad por país
+
+GET /api/anime/:id/streaming?country=AR (sesión requerida). country es ISO2 opcional. No acepta coordenadas ni produce actividad, votos, misiones o biblioteca. Devuelve animeId, country, status, source, links y message.
+
+- regional: opciones informadas por TMDB/JustWatch para el país. links incluye id, site, url y offer en castellano.
+- no_data: TMDB no informa opciones para ese país; no prueba ausencia absoluta.
+- general: enlaces de AniList, sin confirmación regional (país ausente, proveedor no configurado/caído o correspondencia ambigua).
+- unavailable: no se pudo consultar la información; mostrar reintento.
+
+Configurar TMDB_READ_ACCESS_TOKEN o TMDB_API_KEY en .env exclusivamente del backend y reiniciar. Si están ambos, prevalece el token. Las credenciales no forman parte del DTO ni de mensajes de error. Identidad basada en AniList idMal, nombres, año, formato TV/MOVIE y coincidencia única con animación en TMDB; no inferir temporadas ni elegir primer resultado aproximado. Caché en memoria acotada a 500 respuestas/6 horas, sin escrituras en la base.
+
+Atribución: mostrar TMDB/JustWatch y créditos; el enlace del proveedor dirige a opciones de reproducción de TMDB. Referencias: https://developer.themoviedb.org/reference/tv-series-watch-providers y https://developer.themoviedb.org/reference/movie-watch-providers.
+
+### Castellano (26/10/2026)
+GET /anime/:id agrega synopsisEs (string o null), incluso para registros ya guardados. TMDB translations se consulta solo con coincidencia inequívoca de título, año, animación y formato TV/MOVIE. Preferencia AR, MX, ES; caché compartida de seis horas. Límite de espera de localización: ocho segundos; ante ausencia/fallo se conserva synopsis original. No se reemplaza el original en la base. Los géneros se traducen en la serialización JSON y en los nombres de misiones/filtros, sin modificar IDs. El pie final de MAL Rewrite se retira de la lectura y se reconoce en Créditos. La app conserva synopsisEs al recibir entidades parciales del feed.

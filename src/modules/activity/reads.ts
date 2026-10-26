@@ -1,3 +1,4 @@
+import type { SynopsisLocalization } from '../catalog/localization';
 import { Router } from 'express';
 import type { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod';
@@ -9,7 +10,7 @@ import { animeIdSchema, resourceIdSchema } from '../../shared/validation';
 import { pageFields, pageResult, readPage } from '../../shared/pagination';
 import { publicationDto, publicationInclude, ratingDto, ratingInclude } from '../../shared/serializers';
 
-export function readsRouter(db: PrismaClient, catalog: Catalog) {
+export function readsRouter(db: PrismaClient, catalog: Catalog, localization?: SynopsisLocalization) {
   const router = Router();
   router.get('/anime', async (req, res) => {
     const query = z.object({
@@ -20,7 +21,8 @@ export function readsRouter(db: PrismaClient, catalog: Catalog) {
   });
   router.get('/anime/:id', async (req, res) => {
     const id = animeIdSchema.parse(req.params.id);
-    res.json({ anime: await animeDetail(db, catalog, id) });
+    const [anime, synopsisEs] = await Promise.all([animeDetail(db, catalog, id), localization?.get(id)]);
+    res.json({ anime: { ...anime, synopsisEs: synopsisEs ?? null } });
   });
   router.get('/publications', async (req, res) => {
     const { userId } = res.locals.identity as Identity;

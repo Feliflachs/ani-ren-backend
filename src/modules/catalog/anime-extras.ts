@@ -9,6 +9,7 @@ export const ANILIST_URL = 'https://graphql.anilist.co';
 const query = `query AniRenExtras($idMal: Int!, $page: Int!) {
   Media(idMal: $idMal, type: ANIME) {
     id idMal
+    title { romaji english native } format startDate { year }
     externalLinks { id url site language type isDisabled }
     characters(page: $page, perPage: 10, sort: [ROLE, ID]) {
       pageInfo { hasNextPage }
@@ -24,6 +25,8 @@ const person = z.object({ id: z.number().int().positive(), name: z.object({ full
   image: z.object({ medium: z.string().nullable() }).nullable() });
 const responseSchema = z.object({ data: z.object({ Media: z.object({
   id: z.number().int().positive(), idMal: z.number().int().positive(),
+  title: z.object({ romaji: z.string().nullable(), english: z.string().nullable(), native: z.string().nullable() }).optional(),
+  format: z.string().nullable().optional(), startDate: z.object({ year: z.number().nullable() }).optional(),
   externalLinks: z.array(z.object({ id: z.number().int(), url: z.string().nullable(), site: z.string(),
     language: z.string().nullable(), type: z.string().nullable(), isDisabled: z.boolean().nullable(),
   }).nullable()).nullable(),
@@ -43,6 +46,7 @@ function personDto(value: z.infer<typeof person>) {
 
 export type AnimeExtras = {
   animeId: string; source: 'anilist'; anilistId: number; fetchedAt: string;
+  identity?: { titles: string[]; year: number | null; format: string | null };
   regionalAvailability: 'unknown';
   streamingLinks: { id: number; site: string; url: string; language: string | null }[];
   characters: { role: string | null; character: ReturnType<typeof personDto>; voiceActors: ReturnType<typeof personDto>[] }[];
@@ -115,7 +119,7 @@ export class AniListExtras implements AnimeExtrasProvider {
     const media = parsed.data.data.Media;
     if (!media) throw new ApiError(404, 'ANILIST_NOT_FOUND', 'AniList no tiene datos para este anime.');
     if (media.idMal !== malId) throw new ApiError(502, 'ANILIST_INVALID_RESPONSE', 'AniList devolvió otro anime.');
-    return { animeId: id, source: 'anilist', anilistId: media.id, fetchedAt: new Date().toISOString(),
+    return { identity: { titles: Object.values(media.title ?? {}).filter((title): title is string => !!title), year: media.startDate?.year ?? null, format: media.format ?? null }, animeId: id, source: 'anilist', anilistId: media.id, fetchedAt: new Date().toISOString(),
       regionalAvailability: 'unknown', voiceActorLanguage: 'JAPANESE', page,
       nextPage: media.characters.pageInfo.hasNextPage ? page + 1 : null,
       streamingLinks: (media.externalLinks ?? []).flatMap((link) => {

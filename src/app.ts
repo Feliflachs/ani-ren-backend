@@ -1,3 +1,6 @@
+import { localizedJson, SynopsisLocalization } from './modules/catalog/localization';
+import { StreamingService, streamingRouter, type RegionalProvider } from './modules/streaming/streaming';
+import { TmdbStreaming } from './modules/streaming/tmdb';
 import express from 'express';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
@@ -21,10 +24,13 @@ import { AniListExtras, animeExtrasRouter, type AnimeExtrasProvider } from './mo
 
 export function createApp(options: {
   db: PrismaClient; catalog: Catalog; corsOrigins: string[]; sessionDays: number; timeZone: string;
-  extras?: AnimeExtrasProvider;
+  extras?: AnimeExtrasProvider; regional?: RegionalProvider; tmdbReadAccessToken?: string; tmdbApiKey?: string;
 }) {
   const { db, catalog } = options;
+  const extras = options.extras ?? new AniListExtras();
+  const tmdb = options.tmdbReadAccessToken ? new TmdbStreaming(options.tmdbReadAccessToken) : options.tmdbApiKey ? new TmdbStreaming(options.tmdbApiKey, fetch, 'api-key') : undefined;
   const app = express();
+  app.set('json replacer', localizedJson);
   app.disable('x-powered-by');
   app.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options', 'nosniff'); next(); });
   app.use(cors({
@@ -58,8 +64,9 @@ export function createApp(options: {
   app.use('/api', socialRouter(db));
   app.use('/api', libraryRouter(db, catalog));
   app.use('/api', libraryQueriesRouter(db));
-  app.use('/api', readsRouter(db, catalog));
-  app.use('/api', animeExtrasRouter(options.extras ?? new AniListExtras()));
+  app.use('/api', readsRouter(db, catalog, new SynopsisLocalization(extras, tmdb)));
+  app.use('/api', animeExtrasRouter(extras));
+  app.use('/api', streamingRouter(new StreamingService(extras, options.regional ?? tmdb)));
   app.use((_req, _res, next) => next(new ApiError(404, 'ROUTE_NOT_FOUND', 'Ruta no encontrada.')));
   app.use(errorHandler);
   return app;

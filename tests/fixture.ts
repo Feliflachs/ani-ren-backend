@@ -12,7 +12,7 @@ import { hashToken } from '../src/modules/auth/security';
 import type { AnimeExtrasProvider } from '../src/modules/catalog/anime-extras';
 
 export type Account = { id: string; token: string };
-export async function fixture(extras?: AnimeExtrasProvider) {
+export async function fixture(extras?: AnimeExtrasProvider, regional?: import('../src/modules/streaming/streaming').RegionalProvider) {
   const root = path.resolve('.test-data');
   await mkdir(root, { recursive: true });
   const directory = await mkdtemp(path.join(root, 'discovery-'));
@@ -42,7 +42,7 @@ export async function fixture(extras?: AnimeExtrasProvider) {
   let server: Server;
   let base: string;
   async function start() {
-    const app = createApp({ db, catalog, extras, corsOrigins: ['http://localhost:8081'], sessionDays: 7, timeZone: 'America/Buenos_Aires' });
+    const app = createApp({ db, catalog, extras, regional, corsOrigins: ['http://localhost:8081'], sessionDays: 7, timeZone: 'America/Buenos_Aires' });
     server = await new Promise<Server>((resolve) => {
       const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
     });

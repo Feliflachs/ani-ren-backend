@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { catalogBaseUrl, DEFAULT_CATALOG_URL } from '../modules/catalog/catalog';
 
 const environment = z.object({
+  TMDB_API_KEY: z.string().trim().default(''),
+  TMDB_READ_ACCESS_TOKEN: z.string().trim().default(''),
   DATABASE_URL: z.string().startsWith('file:').default('file:./dev.db'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: z.string().default('0.0.0.0'),
@@ -15,6 +17,8 @@ const environment = z.object({
 // Fallar al arrancar si la zona no existe, en lugar de fallar durante un guardado.
 new Intl.DateTimeFormat('en-CA', { timeZone: environment.APP_TIME_ZONE }).format();
 export const config = {
+  tmdbApiKey: environment.TMDB_API_KEY,
+  tmdbReadAccessToken: environment.TMDB_READ_ACCESS_TOKEN,
   databaseUrl: environment.DATABASE_URL,
   catalogBaseUrl: environment.CATALOG_BASE_URL,
   port: environment.PORT,

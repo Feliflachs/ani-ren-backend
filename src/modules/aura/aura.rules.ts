@@ -1,3 +1,4 @@
+import { spanishGenre } from '../catalog/localization';
 export const auraRulesVersion = '2';
 
 // Valores iniciales centralizados: no se aceptan puntos o umbrales desde el cliente.
@@ -30,7 +31,7 @@ export const initialGenres = [
 export function missionDefinitions(genres: { id: string; name: string }[]) {
   const groups = [
     { id: 'watched', label: 'Animes vistos', genreId: null as string | null, icon: 'eye-outline' },
-    ...genres.map(genre => ({ id: `genre-${genre.id.replace(':', '-')}`, label: genre.name, genreId: genre.id, icon: 'sparkles-outline' })),
+    ...genres.map(genre => ({ id: `genre-${genre.id.replace(':', '-')}`, label: spanishGenre(genre).name, genreId: genre.id, icon: 'sparkles-outline' })),
   ];
   return groups.flatMap(group => missionStages.map(stage => ({
     id: `${group.id}-${stage.total}`, groupId: group.id, genreId: group.genreId,
