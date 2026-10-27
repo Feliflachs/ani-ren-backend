@@ -26,10 +26,11 @@ export function publicationDto(row: PublicationWithRelations) {
   };
 }
 
-export const commentInclude = { user: { select: profileSelect } } as const;
+export const commentInclude = { user: { select: profileSelect }, _count: { select: { replies: true } } } as const;
 export function commentDto(row: Prisma.CommentGetPayload<{ include: typeof commentInclude }>) {
   return { id: String(row.id), publicationId: String(row.publicationId), userId: row.userId,
-    author: row.user, text: row.text, createdAt: row.createdAt.toISOString() };
+    author: row.user, text: row.text, parentId: row.parentId === null ? null : String(row.parentId),
+    replyCount: row._count.replies, createdAt: row.createdAt.toISOString() };
 }
 
 export const ratingInclude = { publication: { select: { id: true } } } as const;

@@ -5,6 +5,7 @@
   "description": "API de Ani-Ren: usuarios, catálogo, valoraciones y reviews",
   "engines": { "node": ">=22.18 <23" },
   "scripts": {
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",

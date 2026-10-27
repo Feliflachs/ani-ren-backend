@@ -122,27 +122,47 @@ export function socialRouter(db: PrismaClient) {
   router.get('/publications/:id/comments', async (req, res) => {
     const publicationId = resourceIdSchema.parse(req.params.id);
     await requirePublication(db, publicationId);
-    const query = z.object(pageFields).strict().parse(req.query);
-    const page = readPage(query, `comments:${publicationId}`);
+    const query = z.object({ ...pageFields, parentId: resourceIdSchema.optional() }).strict().parse(req.query);
+    const parentId = query.parentId ?? null;
+    if (parentId !== null && !await db.comment.findFirst({ where: { id: parentId, publicationId, parentId: null } }))
+      throw new ApiError(404, 'COMMENT_NOT_FOUND', 'Comentario no encontrado.');
+    const page = readPage(query, `comments:${publicationId}:${parentId ?? 'root'}`);
     const [rows, total] = await db.$transaction([
-      db.comment.findMany({ where: { publicationId, id: page.before ? { lt: page.before } : undefined },
+      db.comment.findMany({ where: { publicationId, parentId, id: page.before ? { lt: page.before } : undefined },
         orderBy: { id: 'desc' }, take: page.limit + 1, include: commentInclude }),
-      db.comment.count({ where: { publicationId } }),
+      db.comment.count({ where: { publicationId, parentId } }),
     ]);
     res.json(pageResult(rows, total, page, commentDto));
   });
   router.post('/publications/:id/comments', async (req, res) => {
     const publicationId = resourceIdSchema.parse(req.params.id);
-    const { text } = z.object({ text: z.string().trim().min(1).max(2000) }).strict().parse(req.body);
+    const { text, parentId = null } = z.object({ text: z.string().trim().min(1).max(2000),
+      parentId: resourceIdSchema.optional() }).strict().parse(req.body);
     const { userId } = res.locals.identity as Identity;
     const key = operationKeySchema.parse(req.get('Idempotency-Key'));
-    const hash = fingerprint('comment', { publicationId, text });
+    const hash = fingerprint('comment', { publicationId, text, ...(parentId === null ? {} : { parentId }) });
     const response = await saveOperation(db, userId, key, hash, async (tx) => {
       await requirePublication(tx, publicationId);
-      const comment = await tx.comment.create({ data: { publicationId, userId, text }, include: commentInclude });
+      if (parentId !== null && !await tx.comment.findFirst({ where: { id: parentId, publicationId, parentId: null } }))
+        throw new ApiError(400, 'INVALID_REPLY', 'Respondé a un comentario principal de esta publicación.');
+      const comment = await tx.comment.create({ data: { publicationId, userId, text, parentId }, include: commentInclude });
       return { comment: commentDto(comment) };
     });
     res.status(201).json(response);
+  });
+  router.delete('/publications/:id', async (req, res) => {
+    const id = resourceIdSchema.parse(req.params.id);
+    emptyBody.parse(req.body ?? {});
+    const { userId } = res.locals.identity as Identity;
+    await db.$transaction(async tx => {
+      const publication = await tx.publication.findUnique({ where: { id } });
+      if (!publication) throw new ApiError(404, 'PUBLICATION_NOT_FOUND', 'Publicación no encontrada.');
+      if (publication.userId !== userId) throw new ApiError(403, 'NOT_OWNER', 'Solo el autor puede eliminar esta publicación.');
+      await tx.publication.delete({ where: { id } });
+      // DTO snapshots must not resurrect removed publications on later pages.
+      await tx.querySnapshot.deleteMany({});
+    });
+    res.json({ deletedPublicationId: String(id) });
   });
   router.get('/feed', async (req, res) => {
     const query = z.object({ ...pageFields, type: z.literal('following') }).strict().parse(req.query);

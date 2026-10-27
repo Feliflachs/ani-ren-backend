@@ -4,8 +4,7 @@ import { z } from 'zod';
 import type { Identity } from '../auth/auth';
 import { ApiError } from '../../shared/errors';
 import { pageFields } from '../../shared/pagination';
-import { genresOf } from '../search/search';
-import { normalizeTag } from '../../shared/validation';
+import { discoveryScore, discoveryTie, discoveryWindow, freshness } from './ranking';
 import { publicationDto, publicationInclude } from '../../shared/serializers';
 
 // Catálogo guardado en Ani-Ren: no descarga el proveedor ni hace consultas por tarjeta.
@@ -32,13 +31,20 @@ export function animeDiscoveryRouter(db: PrismaClient) {
         if (snapshot && snapshot.userId !== userId) throw new ApiError(400, 'INVALID_CURSOR', 'El cursor no corresponde a esta cuenta.');
         if (!snapshot || snapshot.expiresAt <= new Date()) throw new ApiError(410, 'DISCOVERY_EXPIRED', 'La selección venció. Volvé a cargar Descubrir.');
       } else {
-        const interests = new Set(library.filter((row) => row.watched || row.watchlist || row.favoritePosition !== null)
-          .flatMap((row) => genresOf(row.anime.genres).map((genre) => normalizeTag(genre.name))));
+        const now = new Date();
         const candidates = await tx.anime.findMany({ where: { library: { none: { userId, watched: true } } },
-          select: { id: true, externalId: true, genres: true } });
-        const ids = candidates.map((anime) => ({ ...anime,
-          score: genresOf(anime.genres).filter((genre) => interests.has(normalizeTag(genre.name))).length,
-        })).sort((a, b) => b.score - a.score || b.externalId - a.externalId).map((anime) => anime.id);
+          select: { id: true } });
+        const votes = await tx.ratingEntry.findMany({ where: { currentFor: { some: {} }, createdAt: { gte: discoveryWindow(now) } } });
+        const conversations = await tx.publication.findMany({ where: { kind: 'review' }, select: {
+          userId: true, ratingEntry: { select: { animeId: true } },
+          likes: { where: { createdAt: { gte: discoveryWindow(now) } }, select: { userId: true, createdAt: true } },
+          comments: { where: { createdAt: { gte: discoveryWindow(now) } }, select: { userId: true, createdAt: true } },
+        } });
+        const ids = candidates.map((anime) => ({ id: anime.id,
+          score: discoveryScore(votes.filter(vote => vote.animeId === anime.id),
+            conversations.filter(row => row.ratingEntry?.animeId === anime.id)
+              .flatMap(row => [...row.likes, ...row.comments].filter(event => event.userId !== row.userId)), now),
+        })).sort((a, b) => b.score - a.score || discoveryTie(b.id, now) - discoveryTie(a.id, now) || a.id.localeCompare(b.id)).map(anime => anime.id);
         await tx.discoverySnapshot.deleteMany({ where: { OR: [{ userId }, { expiresAt: { lte: new Date() } }] } });
         snapshot = await tx.discoverySnapshot.create({ data: { userId, animeIds: ids, expiresAt: new Date(Date.now() + 20 * 60_000) } });
       }
@@ -52,13 +58,26 @@ export function animeDiscoveryRouter(db: PrismaClient) {
         tx.ratingEntry.groupBy({ by: ['animeId'], where: { animeId: { in: selectedIds }, currentFor: { some: {} } }, _avg: { rating: true }, _count: true }),
         tx.ratingEntry.groupBy({ by: ['animeId'], where: { animeId: { in: selectedIds } }, _count: true }),
         tx.publication.findMany({ where: { kind: 'review', ratingEntry: { animeId: { in: selectedIds } } },
-          orderBy: [{ likes: { _count: 'desc' } }, { id: 'desc' }], include: publicationInclude(userId) }),
+          orderBy: { id: 'desc' }, include: { ...publicationInclude(userId),
+            comments: { where: { createdAt: { gte: discoveryWindow(new Date()) } }, select: { userId: true, createdAt: true } },
+            likes: { select: { userId: true, createdAt: true } },
+          } }),
       ]);
       const items = selected.flatMap(({ id }) => {
         const item = anime.find((row) => row.id === id);
         if (!item) return [];
         const votes = ratings.find((row) => row.animeId === id);
-        const allReviews = reviews.filter((row) => row.ratingEntry?.animeId === id);
+        const now = new Date();
+        const reviewScore = (row: typeof reviews[number]) => {
+          const people = new Map<string, number>();
+          for (const event of [...row.likes, ...row.comments]) {
+            if (event.userId !== row.userId) people.set(event.userId,
+              Math.max(people.get(event.userId) ?? 0, freshness(event.createdAt, now)));
+          }
+          return freshness(row.createdAt, now) + Math.log1p([...people.values()].reduce((sum, n) => sum + n, 0));
+        };
+        const allReviews = reviews.filter((row) => row.ratingEntry?.animeId === id)
+          .sort((a, b) => reviewScore(b) - reviewScore(a) || b.id - a.id);
         const authors = new Set<string>();
         const featured = allReviews.filter((row) => {
           if (authors.has(row.userId)) return false;
@@ -67,7 +86,9 @@ export function animeDiscoveryRouter(db: PrismaClient) {
         return [{ id, anime: { ...item, statistics: {
           averageRating: votes?._avg.rating ?? null, ratingUserCount: votes?._count ?? 0,
           ratingCount: counts.find((row) => row.animeId === id)?._count ?? 0, reviewCount: allReviews.length,
-        } }, watchlist: watchlist.has(id), reviews: featured.map(publicationDto) }];
+        } }, watchlist: watchlist.has(id), reviews: featured.map(row => publicationDto({
+          ...row, likes: row.likes.filter(like => like.userId === userId),
+        })) }];
       });
       const last = selected.at(-1);
       return { items, total: eligible.length, nextCursor: remaining.length > selected.length && last
