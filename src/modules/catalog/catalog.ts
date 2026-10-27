@@ -124,18 +124,69 @@ export class JikanCatalog implements Catalog {
   }
 
   async browse(query: string, page: number, filters: CatalogFilters) {
-    const params = new URLSearchParams({ page: String(page), limit: '20', sfw: 'true' });
-    if (query) params.set('q', query);
-    // No enviar géneros múltiples como AND: la pantalla pide cualquiera (OR).
-    // Recorremos páginas del proveedor y filtramos metadatos en el servidor.
-    const schema = z.object({ data: z.array(remoteAnime), pagination: z.object({ has_next_page: z.boolean() }) });
-    const parsed = schema.parse(await this.request(`/anime?${params}`, value => schema.safeParse(value).success));
-    const items = parsed.data.map(normalize).filter(anime =>
-      (!filters.genres || anime.genres.some(genre => filters.genres!.includes(genre.id))) &&
-      (!filters.season || anime.season === filters.season) && (!filters.year || anime.year === filters.year));
-    return { items, nextPage: parsed.pagination.has_next_page ? page + 1 : null };
-  }
+    const TARGET_LIMIT = 10; // Meta más baja (10) para llenarla mucho más fácil
+    let currentPage = page;
+    let accumulatedItems: any[] = [];
+    let hasNextPage = false;
+    let pagesFetched = 0;
+    const MAX_PAGES_TO_FETCH = 8; // Busca profundo (revisa hasta 200 animes crudos)
 
+    const schema = z.object({
+      data: z.array(remoteAnime),
+      pagination: z.object({ has_next_page: z.boolean() }),
+    });
+
+    try {
+      // Bucle con red de seguridad: busca hasta juntar 10 o llegar al límite de 8 páginas
+      while (accumulatedItems.length < TARGET_LIMIT && pagesFetched < MAX_PAGES_TO_FETCH) {
+        pagesFetched++;
+        const params = new URLSearchParams({
+          page: String(currentPage),
+          limit: '25',
+          sfw: 'true',
+        });
+        if (query) params.set('q', query);
+
+        const response = await this.request(
+          `/anime?${params}`,
+          (value) => schema.safeParse(value).success,
+        );
+        const parsed = schema.parse(response);
+
+        // Filtro local (mantiene la lógica OR de los géneros)
+        const filteredBatch = parsed.data.map(normalize).filter(
+          (anime) =>
+            (!filters.genres ||
+              anime.genres.some((genre) => filters.genres!.includes(genre.id))) &&
+            (!filters.season || anime.season === filters.season) &&
+            (!filters.year || anime.year === filters.year),
+        );
+
+        accumulatedItems.push(...filteredBatch);
+        hasNextPage = parsed.pagination.has_next_page;
+
+        if (!hasNextPage) break;
+
+        // Si todavía faltan elementos para llegar a los 10, avanzamos de página con una pausa corta
+        if (accumulatedItems.length < TARGET_LIMIT) {
+          currentPage++;
+          await new Promise((resolve) => setTimeout(resolve, 250)); // Pausa breve para cuidar la API
+        }
+      }
+    } catch (error) {
+      // RED DE SEGURIDAD: Si la API externa falla o da timeout, no explota la app. 
+      // Devuelve silenciosamente lo que alcanzó a acumular hasta ese punto.
+      console.warn('Jikan search warning: returning partial results due to API limit/timeout', error);
+    }
+
+    const items = accumulatedItems.slice(0, TARGET_LIMIT);
+
+    return {
+      items,
+      nextPage: hasNextPage ? currentPage + 1 : null,
+    };
+  }
+  
   async get(id: string) {
     animeIdSchema.parse(id);
     const schema = z.object({ data: remoteAnime }).refine((value) => `mal:${value.data.mal_id}` === id);
