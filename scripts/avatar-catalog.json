@@ -1,0 +1,371 @@
+[
+  {
+    "collection": "One Piece",
+    "name": "Luffy",
+    "id": "monkey-d-luffy",
+    "sortOrder": 0,
+    "imageUrl": "/media/avatars/monkey-d-luffy.jpeg",
+    "sourceUrl": "https://alphacoders.com/monkey-d-luffy-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375473.jpeg"
+  },
+  {
+    "collection": "One Piece",
+    "name": "Zoro",
+    "id": "roronoa-zoro",
+    "sortOrder": 1,
+    "imageUrl": "/media/avatars/roronoa-zoro.jpeg",
+    "sourceUrl": "https://alphacoders.com/roronoa-zoro-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375474.jpeg"
+  },
+  {
+    "collection": "One Piece",
+    "name": "Nami",
+    "id": "nami",
+    "sortOrder": 2,
+    "imageUrl": "/media/avatars/nami.jpg",
+    "sourceUrl": "https://alphacoders.com/nami-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/823/82329.jpg"
+  },
+  {
+    "collection": "One Piece",
+    "name": "Sanji",
+    "id": "sanji",
+    "sortOrder": 3,
+    "imageUrl": "/media/avatars/sanji.jpg",
+    "sourceUrl": "https://alphacoders.com/sanji-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/376/376240.jpg"
+  },
+  {
+    "collection": "One Piece",
+    "name": "Robin",
+    "id": "nico-robin",
+    "sortOrder": 4,
+    "imageUrl": "/media/avatars/nico-robin.jpg",
+    "sourceUrl": "https://alphacoders.com/nico-robin-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/334/334951.jpg"
+  },
+  {
+    "collection": "One Piece",
+    "name": "Chopper",
+    "id": "tony-tony-chopper",
+    "sortOrder": 5,
+    "imageUrl": "/media/avatars/tony-tony-chopper.png",
+    "sourceUrl": "https://alphacoders.com/tony-tony-chopper-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/378/378895.png"
+  },
+  {
+    "collection": "One Piece",
+    "name": "Brook",
+    "id": "brook",
+    "sortOrder": 6,
+    "imageUrl": "/media/avatars/brook.png",
+    "sourceUrl": "https://alphacoders.com/brook-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/378/378939.png"
+  },
+  {
+    "collection": "Naruto",
+    "name": "Naruto",
+    "id": "naruto-uzumaki",
+    "sortOrder": 100,
+    "imageUrl": "/media/avatars/naruto-uzumaki.png",
+    "sourceUrl": "https://alphacoders.com/naruto-uzumaki-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/320/32018.png"
+  },
+  {
+    "collection": "Naruto",
+    "name": "Sasuke",
+    "id": "sasuke-uchiha",
+    "sortOrder": 101,
+    "imageUrl": "/media/avatars/sasuke-uchiha.jpg",
+    "sourceUrl": "https://alphacoders.com/sasuke-uchiha-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/370/370568.jpg"
+  },
+  {
+    "collection": "Naruto",
+    "name": "Sakura",
+    "id": "sakura-haruno",
+    "sortOrder": 102,
+    "imageUrl": "/media/avatars/sakura-haruno.png",
+    "sourceUrl": "https://alphacoders.com/sakura-haruno-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375945.png"
+  },
+  {
+    "collection": "Naruto",
+    "name": "Kakashi",
+    "id": "kakashi-hatake",
+    "sortOrder": 103,
+    "imageUrl": "/media/avatars/kakashi-hatake.jpg",
+    "sourceUrl": "https://alphacoders.com/kakashi-hatake-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/364/364483.jpg"
+  },
+  {
+    "collection": "Naruto",
+    "name": "Hinata",
+    "id": "hinata-hyuga",
+    "sortOrder": 104,
+    "imageUrl": "/media/avatars/hinata-hyuga.jpg",
+    "sourceUrl": "https://alphacoders.com/hinata-hyuga-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/849/84904.jpg"
+  },
+  {
+    "collection": "Naruto",
+    "name": "Itachi",
+    "id": "itachi-uchiha",
+    "sortOrder": 105,
+    "imageUrl": "/media/avatars/itachi-uchiha.png",
+    "sourceUrl": "https://alphacoders.com/itachi-uchiha-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375167.png"
+  },
+  {
+    "collection": "Bleach",
+    "name": "Ichigo",
+    "id": "ichigo-kurosaki",
+    "sortOrder": 200,
+    "imageUrl": "/media/avatars/ichigo-kurosaki.jpg",
+    "sourceUrl": "https://alphacoders.com/ichigo-kurosaki-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/118/118702.jpg"
+  },
+  {
+    "id": "rukia-kuchiki",
+    "collection": "Bleach",
+    "name": "Rukia",
+    "sortOrder": 201,
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375951.png",
+    "sourceUrl": "https://alphacoders.com/rukia-kuchiki-pfp",
+    "imageUrl": "/media/avatars/rukia-kuchiki.png"
+  },
+  {
+    "id": "orihime-inoue",
+    "collection": "Bleach",
+    "name": "Orihime",
+    "sortOrder": 202,
+    "originalUrl": "https://bleach-anime.com/assets/img/character/thumb_03.jpg",
+    "sourceUrl": "https://bleach-anime.com/character/",
+    "imageUrl": "/media/avatars/orihime-inoue.jpg"
+  },
+  {
+    "id": "renji-abarai",
+    "collection": "Bleach",
+    "name": "Renji",
+    "sortOrder": 203,
+    "originalUrl": "https://bleach-anime.com/assets/img/character/thumb_12.jpg",
+    "sourceUrl": "https://bleach-anime.com/character/",
+    "imageUrl": "/media/avatars/renji-abarai.jpg"
+  },
+  {
+    "collection": "Bleach",
+    "name": "Hitsugaya",
+    "id": "toshiro-hitsugaya",
+    "sortOrder": 204,
+    "imageUrl": "/media/avatars/toshiro-hitsugaya.png",
+    "sourceUrl": "https://alphacoders.com/toshiro-hitsugaya-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/378/378022.png"
+  },
+  {
+    "collection": "Jujutsu Kaisen",
+    "name": "Yuji",
+    "id": "yuji-itadori",
+    "sortOrder": 300,
+    "imageUrl": "/media/avatars/yuji-itadori.jpg",
+    "sourceUrl": "https://alphacoders.com/yuji-itadori-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/371/371723.jpg"
+  },
+  {
+    "collection": "Jujutsu Kaisen",
+    "name": "Megumi",
+    "id": "megumi-fushiguro",
+    "sortOrder": 301,
+    "imageUrl": "/media/avatars/megumi-fushiguro.jpeg",
+    "sourceUrl": "https://alphacoders.com/megumi-fushiguro-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/370/370285.jpeg"
+  },
+  {
+    "collection": "Jujutsu Kaisen",
+    "name": "Nobara",
+    "id": "nobara-kugisaki",
+    "sortOrder": 302,
+    "imageUrl": "/media/avatars/nobara-kugisaki.jpg",
+    "sourceUrl": "https://alphacoders.com/nobara-kugisaki-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/336/336189.jpg"
+  },
+  {
+    "collection": "Jujutsu Kaisen",
+    "name": "Gojo",
+    "id": "satoru-gojo",
+    "sortOrder": 303,
+    "imageUrl": "/media/avatars/satoru-gojo.png",
+    "sourceUrl": "https://alphacoders.com/satoru-gojo-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375542.png"
+  },
+  {
+    "collection": "Jujutsu Kaisen",
+    "name": "Maki",
+    "id": "maki-zenin",
+    "sortOrder": 304,
+    "imageUrl": "/media/avatars/maki-zenin.jpg",
+    "sourceUrl": "https://alphacoders.com/maki-zenin-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/378/378518.jpg"
+  },
+  {
+    "collection": "Spy x Family",
+    "name": "Anya",
+    "id": "anya-forger",
+    "sortOrder": 400,
+    "imageUrl": "/media/avatars/anya-forger.png",
+    "sourceUrl": "https://alphacoders.com/anya-forger-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/365/365483.png"
+  },
+  {
+    "collection": "Spy x Family",
+    "name": "Loid",
+    "id": "loid-forger",
+    "sortOrder": 401,
+    "imageUrl": "/media/avatars/loid-forger.png",
+    "sourceUrl": "https://alphacoders.com/loid-forger-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/325/325695.png"
+  },
+  {
+    "collection": "Spy x Family",
+    "name": "Yor",
+    "id": "yor-forger",
+    "sortOrder": 402,
+    "imageUrl": "/media/avatars/yor-forger.jpg",
+    "sourceUrl": "https://alphacoders.com/yor-forger-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/365/365945.jpg"
+  },
+  {
+    "id": "bond-forger",
+    "collection": "Spy x Family",
+    "name": "Bond",
+    "sortOrder": 403,
+    "originalUrl": "https://avatarfiles.alphacoders.com/341/341082.jpg",
+    "sourceUrl": "https://alphacoders.com/bond-(spy-x-family)-pfp",
+    "imageUrl": "/media/avatars/bond-forger.jpg"
+  },
+  {
+    "collection": "Frieren",
+    "name": "Frieren",
+    "id": "frieren",
+    "sortOrder": 500,
+    "imageUrl": "/media/avatars/frieren.png",
+    "sourceUrl": "https://alphacoders.com/frieren-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375161.png"
+  },
+  {
+    "id": "fern",
+    "collection": "Frieren",
+    "name": "Fern",
+    "sortOrder": 501,
+    "originalUrl": "https://avatarfiles.alphacoders.com/376/376053.png",
+    "sourceUrl": "https://alphacoders.com/fern-(frieren-beyond-journeys-end)-pfp",
+    "imageUrl": "/media/avatars/fern.png"
+  },
+  {
+    "id": "stark",
+    "collection": "Frieren",
+    "name": "Stark",
+    "sortOrder": 502,
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375911.png",
+    "sourceUrl": "https://alphacoders.com/stark-(frieren-beyond-journeys-end)-pfp",
+    "imageUrl": "/media/avatars/stark.png"
+  },
+  {
+    "id": "himmel",
+    "collection": "Frieren",
+    "name": "Himmel",
+    "sortOrder": 503,
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375914.png",
+    "sourceUrl": "https://alphacoders.com/himmel-(frieren-beyond-journeys-end)-pfp",
+    "imageUrl": "/media/avatars/himmel.png"
+  },
+  {
+    "collection": "Attack on Titan",
+    "name": "Eren",
+    "id": "eren-yeager",
+    "sortOrder": 600,
+    "imageUrl": "/media/avatars/eren-yeager.jpeg",
+    "sourceUrl": "https://alphacoders.com/eren-yeager-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375296.jpeg"
+  },
+  {
+    "collection": "Attack on Titan",
+    "name": "Mikasa",
+    "id": "mikasa-ackerman",
+    "sortOrder": 601,
+    "imageUrl": "/media/avatars/mikasa-ackerman.jpeg",
+    "sourceUrl": "https://alphacoders.com/mikasa-ackerman-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375295.jpeg"
+  },
+  {
+    "collection": "Attack on Titan",
+    "name": "Armin",
+    "id": "armin-arlert",
+    "sortOrder": 602,
+    "imageUrl": "/media/avatars/armin-arlert.jpeg",
+    "sourceUrl": "https://alphacoders.com/armin-arlert-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375299.jpeg"
+  },
+  {
+    "collection": "Attack on Titan",
+    "name": "Levi",
+    "id": "levi-ackerman",
+    "sortOrder": 603,
+    "imageUrl": "/media/avatars/levi-ackerman.jpeg",
+    "sourceUrl": "https://alphacoders.com/levi-ackerman-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375291.jpeg"
+  },
+  {
+    "collection": "Attack on Titan",
+    "name": "Hange",
+    "id": "hange-zoe",
+    "sortOrder": 604,
+    "imageUrl": "/media/avatars/hange-zoe.jpeg",
+    "sourceUrl": "https://alphacoders.com/hange-zoe-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375287.jpeg"
+  },
+  {
+    "collection": "Demon Slayer",
+    "name": "Tanjiro",
+    "id": "tanjiro-kamado",
+    "sortOrder": 700,
+    "imageUrl": "/media/avatars/tanjiro-kamado.jpg",
+    "sourceUrl": "https://alphacoders.com/tanjiro-kamado-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/364/364275.jpg"
+  },
+  {
+    "collection": "Demon Slayer",
+    "name": "Nezuko",
+    "id": "nezuko-kamado",
+    "sortOrder": 701,
+    "imageUrl": "/media/avatars/nezuko-kamado.png",
+    "sourceUrl": "https://alphacoders.com/nezuko-kamado-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375114.png"
+  },
+  {
+    "collection": "Demon Slayer",
+    "name": "Zenitsu",
+    "id": "zenitsu-agatsuma",
+    "sortOrder": 702,
+    "imageUrl": "/media/avatars/zenitsu-agatsuma.png",
+    "sourceUrl": "https://alphacoders.com/zenitsu-agatsuma-pfp",
+    "originalUrl": "https://avatarfiles.alphacoders.com/375/375117.png"
+  },
+  {
+    "id": "inosuke-hashibira",
+    "collection": "Demon Slayer",
+    "name": "Inosuke",
+    "sortOrder": 703,
+    "originalUrl": "https://avatarfiles.alphacoders.com/202/202509.jpg",
+    "sourceUrl": "https://alphacoders.com/inosuke-hashibira-pfp",
+    "imageUrl": "/media/avatars/inosuke-hashibira.jpg"
+  },
+  {
+    "id": "shinobu-kocho",
+    "collection": "Demon Slayer",
+    "name": "Shinobu",
+    "sortOrder": 704,
+    "originalUrl": "https://avatarfiles.alphacoders.com/376/376200.png",
+    "sourceUrl": "https://alphacoders.com/shinobu-kocho-pfp",
+    "imageUrl": "/media/avatars/shinobu-kocho.png"
+  }
+]

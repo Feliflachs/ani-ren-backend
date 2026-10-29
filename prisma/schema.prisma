@@ -15,6 +15,8 @@ model User {
   name             String
   bio              String         @default("")
   avatarUrl        String?
+  avatarId         String?
+  avatar           Avatar?        @relation(fields: [avatarId], references: [id], onDelete: SetNull)
   createdAt        DateTime       @default(now())
   sessions         Session[]
   library          LibraryEntry[]
@@ -31,6 +33,17 @@ model User {
   discoverySnapshot DiscoverySnapshot?
   missionClaims    MissionClaim[]
   querySnapshots   QuerySnapshot[]
+}
+
+model Avatar {
+  id String @id
+  collection String
+  name String
+  imageUrl String
+  sourceUrl String
+  active Boolean @default(true)
+  sortOrder Int @default(0)
+  users User[]
 }
 
 model Session {

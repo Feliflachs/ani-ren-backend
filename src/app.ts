@@ -2,6 +2,7 @@ import { localizedJson, SynopsisLocalization } from './modules/catalog/localizat
 import { StreamingService, streamingRouter, type RegionalProvider } from './modules/streaming/streaming';
 import { TmdbStreaming } from './modules/streaming/tmdb';
 import express from 'express';
+import path from 'node:path';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
 import type { PrismaClient } from '@prisma/client';
@@ -43,6 +44,7 @@ export function createApp(options: {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   }));
   app.use(express.json({ limit: '32kb' }));
+  app.use('/media/avatars', express.static(path.resolve(__dirname, '../public/avatars'), { dotfiles: 'deny', index: false }));
   app.get('/api/health', async (_req, res) => {
     await db.$queryRaw`SELECT 1`;
     res.json({ ok: true });
@@ -54,6 +56,10 @@ export function createApp(options: {
     message: { error: { code: 'RATE_LIMIT', message: 'Demasiadas solicitudes. Reintentá en un momento.' } },
   }));
   app.use('/api', activityRouter(db, catalog, options.timeZone));
+  app.get('/api/avatars', async (_req, res) => {
+    const items = await db.avatar.findMany({ where: { active: true }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] });
+    res.json({ items });
+  });
   app.use('/api', postsRouter(db, catalog));
   app.use('/api', listsRouter(db, catalog));
   app.use('/api', searchRouter(db, catalog));

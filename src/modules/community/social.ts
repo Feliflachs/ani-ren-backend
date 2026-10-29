@@ -32,12 +32,24 @@ export function socialRouter(db: PrismaClient) {
   router.patch('/me/profile', async (req, res) => {
     const data = z.object({ name: z.string().trim().min(1).max(60).optional(),
       bio: z.string().trim().max(500).optional(),
+      avatarId: z.string().min(1).max(100).nullable().optional(),
       avatarUrl: z.url({ protocol: /^https$/ }).max(2000).refine(value => {
         const url = new URL(value); return !url.username && !url.password;
       }).nullable().optional() }).strict()
       .refine((value) => Object.keys(value).length > 0, 'Indicá un cambio.').parse(req.body);
     const { userId } = res.locals.identity as Identity;
-    res.json({ user: await db.user.update({ where: { id: userId }, data, select: profileSelect }) });
+    if (data.avatarId !== undefined && data.avatarUrl !== undefined) {
+      throw new ApiError(400, 'INVALID_AVATAR', 'Elegí un avatar del catálogo o una URL, no ambos.');
+    }
+    const user = await db.$transaction(async (tx) => {
+      if (data.avatarId !== undefined) {
+        const avatar = data.avatarId === null ? null : await tx.avatar.findFirst({ where: { id: data.avatarId, active: true } });
+        if (data.avatarId !== null && !avatar) throw new ApiError(400, 'INVALID_AVATAR', 'Este avatar no está disponible.');
+        data.avatarUrl = avatar?.imageUrl ?? null;
+      } else if (data.avatarUrl !== undefined) data.avatarId = null;
+      return tx.user.update({ where: { id: userId }, data, select: profileSelect });
+    });
+    res.json({ user });
   });
   router.get('/users/:id', async (req, res) => {
     const id = userIdSchema.parse(req.params.id);

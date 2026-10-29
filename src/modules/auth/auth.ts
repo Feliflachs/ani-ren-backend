@@ -5,7 +5,7 @@ import { ApiError } from '../../shared/errors';
 import { credentialsSchema } from '../../shared/validation';
 import { hashPassword, hashToken, newToken, verifyPassword } from './security';
 
-export const profileSelect = { id: true, handle: true, name: true, bio: true, avatarUrl: true, createdAt: true } as const;
+export const profileSelect = { id: true, handle: true, name: true, bio: true, avatarUrl: true, avatarId: true, createdAt: true } as const;
 export type Identity = { userId: string; tokenHash: string };
 
 export function requireSession(db: PrismaClient): RequestHandler {
