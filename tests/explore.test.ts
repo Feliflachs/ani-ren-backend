@@ -23,6 +23,13 @@ test('valoraciones por país: reintentos no duplican vistas; ediciones conservan
     const country = (await f.request('/explore/countries/argentina', a)).body;
     assert.equal(country.statistics.views, 2); assert.equal(country.statistics.averageRating, 2);
     assert.equal(country.topRated[0].anime.id, 'mal:1'); assert.equal(country.trending[0].views, 2);
+    assert.equal(country.topViewed[0].anime.id, 'mal:1');
+    assert.equal(country.topReviewed[0].anime.id, 'mal:1');
+    assert.equal(country.topReviewed[0].reviews, 1);
+    const emptyCountry = (await f.request('/explore/countries/IS', a)).body;
+    assert.deepEqual(emptyCountry.topViewed, []); assert.deepEqual(emptyCountry.topReviewed, []);
+    const otherAnime = (await f.request('/explore/countries/AR?animeId=mal:2', a)).body;
+    assert.deepEqual(otherAnime.topViewed, []);
     assert.equal((await f.request('/explore/countries/AR/reviews', a)).body.total, 1);
     assert.equal((await f.request('/explore/map?metric=anime&animeId=mal:1', a)).body.items[0].code, 'AR');
     assert.equal((await f.request('/explore/map?metric=anime', a)).status, 400);
@@ -50,6 +57,8 @@ test('tops usan período real, género y voto vigente; tendencias regionales sol
     assert.equal((await f.request('/explore/tops?period=all&genre=mal:22', a)).body.total, 1);
     const country = (await f.request('/explore/countries/AR', a)).body;
     assert.equal(country.topRated[0].anime.id, 'mal:4'); assert.equal(country.trending.length, 1); assert.equal(country.trending[0].anime.id, 'mal:1');
+    assert.deepEqual(country.topViewed.map((row: any) => row.anime.id), ['mal:1', 'mal:4']);
+    assert.deepEqual(country.topReviewed, []);
     const home = (await f.request('/explore', a)).body;
     assert.equal(home.trending[0].anime.id, 'mal:1'); assert.equal(home.seasons.length, 4);
     assert.ok(home.genres.some((genre: any) => genre.id === 'mal:24'));

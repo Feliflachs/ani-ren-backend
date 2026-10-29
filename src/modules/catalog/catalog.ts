@@ -125,12 +125,20 @@ export class JikanCatalog implements Catalog {
 
   async browse(query: string, page: number, filters: CatalogFilters) {
     const params = new URLSearchParams({ page: String(page), limit: '20', sfw: 'true' });
-    if (query) params.set('q', query);
+    const seasonal = !!(filters.season && filters.year);
+    if (query && !seasonal) params.set('q', query);
+    // Un género puede filtrarse en origen. Para varios conservamos la unión (OR) local.
+    if (!seasonal && filters.genres?.length === 1) {
+      params.set('genres', filters.genres[0].slice(4));
+    }
     // No enviar géneros múltiples como AND: la pantalla pide cualquiera (OR).
     // Recorremos páginas del proveedor y filtramos metadatos en el servidor.
     const schema = z.object({ data: z.array(remoteAnime), pagination: z.object({ has_next_page: z.boolean() }) });
-    const parsed = schema.parse(await this.request(`/anime?${params}`, value => schema.safeParse(value).success));
+    const path = seasonal ? `/seasons/${filters.year}/${filters.season}` : '/anime';
+    const parsed = schema.parse(await this.request(`${path}?${params}`, value => schema.safeParse(value).success));
+    const term = query.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const items = parsed.data.map(normalize).filter(anime =>
+      (!seasonal || !term || `${anime.title} ${anime.japanese ?? ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(term)) &&
       (!filters.genres || anime.genres.some(genre => filters.genres!.includes(genre.id))) &&
       (!filters.season || anime.season === filters.season) && (!filters.year || anime.year === filters.year));
     return { items, nextPage: parsed.pagination.has_next_page ? page + 1 : null };

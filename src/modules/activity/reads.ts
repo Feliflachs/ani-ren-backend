@@ -12,6 +12,18 @@ import { publicationDto, publicationInclude, ratingDto, ratingInclude } from '..
 
 export function readsRouter(db: PrismaClient, catalog: Catalog, localization?: SynopsisLocalization) {
   const router = Router();
+  router.get('/anime/statistics', async (req, res) => {
+    const { ids } = z.object({ ids: z.string().max(1500).transform(value => value.split(','))
+      .pipe(z.array(animeIdSchema).min(1).max(100)) }).strict().parse(req.query);
+    const rows = await db.ratingEntry.groupBy({ by: ['animeId'],
+      where: { animeId: { in: ids }, currentFor: { some: {} } },
+      _avg: { rating: true }, _count: { _all: true } });
+    const totals = new Map(rows.map(row => [row.animeId, row]));
+    res.json({ items: [...new Set(ids)].map(id => ({ id, statistics: {
+      averageRating: totals.get(id)?._avg.rating ?? null,
+      ratingUserCount: totals.get(id)?._count._all ?? 0,
+    } })) });
+  });
   router.get('/anime', async (req, res) => {
     const query = z.object({
       q: z.string().trim().min(2).max(100),

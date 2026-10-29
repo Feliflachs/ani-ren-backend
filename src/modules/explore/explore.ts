@@ -59,6 +59,9 @@ export function exploreRouter(db: PrismaClient) {
         statistics: { views: local.length, reviews: local.filter(event => event.publication).length,
           averageRating: local.length ? local.reduce((sum, event) => sum + event.rating, 0) / local.length : null },
         topRated: sortTop(totals, 'rating').slice(0, 5),
+        topViewed: sortTop(totals, 'views').slice(0, 5),
+        topReviewed: totals.filter(row => row.reviews > 0).sort((a, b) =>
+          b.reviews - a.reviews || b.views - a.views || a.anime.id.localeCompare(b.anime.id)).slice(0, 5),
         trending: sortTop(animeTotals(recent, undefined, true), 'trending').slice(0, 5), trendingPeriod: 'week',
         comparison: countryTotals(all, query.animeId ? 'anime' : 'views', query.animeId) };
     });

@@ -8,6 +8,14 @@ Catálogo externo: Tenrai reemplaza la API pública cerrada de Jikan, conservand
 
 ## Rutas
 
+### Promedios de tarjetas en lote
+
+`GET /anime/statistics?ids=mal:1,mal:20` requiere sesión y admite hasta 100 referencias.
+Devuelve `{ items: [{ id, statistics: { averageRating, ratingUserCount } }] }`.
+Cuenta solo el voto vigente de cada persona, igual que la ficha del anime; sin votos,
+devuelve `averageRating: null` y `ratingUserCount: 0`. No consulta el proveedor externo
+ni crea actividad. Permite cargar las estrellas de búsquedas y publicaciones sin abrir fichas.
+
 ### Datos complementarios: AniList
 
 `GET /api/anime/mal:20/extras?page=1` requiere sesión. Consulta AniList directamente por `idMal`, sin Jikan ni registros previos en SQLite. `page` es opcional, entero de 1 a 1000. No acepta `country`.
