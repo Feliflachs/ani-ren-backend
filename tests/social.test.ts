@@ -125,6 +125,15 @@ test('seguimientos idempotentes, amigos recíprocos y feed de cuentas seguidas',
   assert.equal((await call(`/me/following/${bob.user.id}`, alice, 'PUT')).body.isFriend, true);
   const friends = (await call(`/users/${bob.user.id}/friends`, bob)).body;
   assert.equal(friends.total, 1); assert.equal(friends.items[0].id, alice.user.id);
+  assert.equal(friends.items[0].isFollowing, true);
+  assert.equal(friends.items[0].isFriend, true);
+  const ownFollowing = (await call(`/users/${bob.user.id}/following`, bob)).body.items[0];
+  assert.equal(ownFollowing.isFollowing, true);
+  const ownFollowers = (await call(`/users/${alice.user.id}/followers`, alice)).body.items[0];
+  assert.equal(ownFollowers.isFollowing, true);
+  const visitorFollowing = (await call(`/users/${bob.user.id}/following`, carol)).body.items[0];
+  assert.equal(visitorFollowing.isFollowing, false);
+  assert.equal(visitorFollowing.isFriend, false);
   const first = (await call('/feed?type=following&limit=1', bob)).body;
   assert.equal(first.total, 2); assert.equal(first.items[0].id, reviewId);
   const second = (await call(`/feed?type=following&limit=1&cursor=${first.nextCursor}`, bob)).body;

@@ -102,15 +102,26 @@ export function socialRouter(db: PrismaClient) {
       await requireUser(db, id);
       const query = z.object(pageFields).strict().parse(req.query);
       const page = readPage(query, `${collection}:${id}`);
+      const { userId: viewerId } = res.locals.identity as Identity;
+      const connectionSelect = {
+        ...profileSelect,
+        followers: { where: { followerId: viewerId }, select: { id: true } },
+        following: { where: { followedId: viewerId }, select: { id: true } },
+      };
       const where: Prisma.FollowWhereInput = collection === 'followers' ? { followedId: id }
         : collection === 'friends' ? reciprocal(id) : { followerId: id };
       const [rows, total] = await db.$transaction([
         db.follow.findMany({ where: { ...where, id: page.before ? { lt: page.before } : undefined },
           orderBy: { id: 'desc' }, take: page.limit + 1,
-          include: { follower: { select: profileSelect }, followed: { select: profileSelect } } }),
+          include: { follower: { select: connectionSelect }, followed: { select: connectionSelect } } }),
         db.follow.count({ where }),
       ]);
-      res.json(pageResult(rows, total, page, (row) => collection === 'followers' ? row.follower : row.followed));
+      res.json(pageResult(rows, total, page, (row) => {
+        const { followers, following, ...profile } = collection === 'followers' ? row.follower : row.followed;
+        const isFollowing = followers.length > 0;
+        const followsMe = following.length > 0;
+        return { ...profile, isFollowing, followsMe, isFriend: isFollowing && followsMe };
+      }));
     });
   }
 
