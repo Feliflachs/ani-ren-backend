@@ -1,0 +1,3 @@
+ALTER TABLE "User" ADD COLUMN "avatarUrl" TEXT;
+ALTER TABLE "Anime" ADD COLUMN "durationMinutes" INTEGER;
+ALTER TABLE "Anime" ADD COLUMN "studios" JSONB NOT NULL DEFAULT '[]';

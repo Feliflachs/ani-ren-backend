@@ -94,6 +94,10 @@ test('búsqueda normaliza tildes, separa categorías, hashtags exactos y filtros
   assert.equal((await f.request(`/search?type=publications&q=otro&cursor=${page.nextCursor}`, bob)).status, 400);
   assert.equal((await f.request(`/search?type=lists&q=animacion&cursor=${page.nextCursor}`, bob)).status, 400);
   assert.equal((await f.request('/search?type=anime&q=Naruto', bob)).body.nextPage, 2);
+  const filtered = await f.request('/search?type=anime&genres=mal:22,mal:24&season=winter&year=2025&page=2', bob);
+  assert.equal(filtered.status, 200); assert.deepEqual(filtered.body.items.map((row: any) => row.id), ['mal:4']);
+  assert.equal(filtered.body.nextPage, null);
+  assert.equal((await f.request('/search?type=anime&genres=mal:24&season=winter', bob)).body.items.length, 0);
   f.state.offline = true;
   try {
     assert.equal((await f.request('/search?type=users&q=alice', bob)).status, 200);

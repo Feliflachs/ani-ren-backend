@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "API de Ani-Ren: usuarios, catálogo, valoraciones y reviews",
-  "engines": { "node": ">=22.18 <23" },
+  "engines": {
+    "node": ">=22.18 <23"
+  },
   "scripts": {
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
@@ -15,7 +18,12 @@
     "db:studio": "node scripts/prisma.cjs studio",
     "check:catalog": "tsx scripts/check-catalog.ts",
     "check:anilist": "tsx scripts/check-anilist.ts",
-    "test": "tsx --test --test-concurrency=1 tests/*.test.ts"
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
+    "avatars:download": "node scripts/download-avatars.cjs",
+    "seed:avatars": "tsx scripts/seed-avatars.ts",
+    "seed:world": "tsx scripts/seed-world.ts",
+    "seed:popular": "tsx scripts/seed-popular.ts",
+    "seed:social": "tsx scripts/seed-social-thread.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

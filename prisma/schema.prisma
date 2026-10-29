@@ -14,6 +14,9 @@ model User {
   passwordHash     String
   name             String
   bio              String         @default("")
+  avatarUrl        String?
+  avatarId         String?
+  avatar           Avatar?        @relation(fields: [avatarId], references: [id], onDelete: SetNull)
   createdAt        DateTime       @default(now())
   sessions         Session[]
   library          LibraryEntry[]
@@ -29,6 +32,18 @@ model User {
   feedSnapshot     FeedSnapshot?
   discoverySnapshot DiscoverySnapshot?
   missionClaims    MissionClaim[]
+  querySnapshots   QuerySnapshot[]
+}
+
+model Avatar {
+  id String @id
+  collection String
+  name String
+  imageUrl String
+  sourceUrl String
+  active Boolean @default(true)
+  sortOrder Int @default(0)
+  users User[]
 }
 
 model Session {
@@ -51,6 +66,8 @@ model Anime {
   imageUrl      String?
   synopsis      String?
   episodes      Int?
+  durationMinutes Int?
+  studios       Json           @default("[]")
   year          Int?
   season        String?
   genres        Json
@@ -87,6 +104,7 @@ model RatingEntry {
   rating      Float
   watchedOn   String?
   rewatched   Boolean      @default(false)
+  countryCode String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime?
   user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -96,6 +114,7 @@ model RatingEntry {
 
   @@index([userId, animeId, id])
   @@index([animeId])
+  @@index([countryCode, createdAt, animeId])
 }
 
 // Las reviews tienen valoración; los posteos solo texto y referencias opcionales.
@@ -163,8 +182,12 @@ model Comment {
   createdAt     DateTime    @default(now())
   user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  parentId      Int?
+  parent        Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies       Comment[] @relation("Replies")
 
   @@index([publicationId, id])
+  @@index([publicationId, parentId, id])
 }
 
 // Guarda el resultado original del POST para recuperar un envío cuya respuesta se perdió.
@@ -251,6 +274,7 @@ model MissionClaim {
   rewardId     String
   rewardName   String
   rulesVersion String
+  points       Int      @default(0)
   claimedAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
@@ -264,5 +288,19 @@ model DiscoverySnapshot {
   createdAt DateTime @default(now())
   expiresAt DateTime
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+
+// Páginas estables para rankings y selecciones calculadas por el servidor.
+model QuerySnapshot {
+  id        String   @id @default(cuid())
+  userId    String
+  scope     String
+  items     Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scope])
   @@index([expiresAt])
 }

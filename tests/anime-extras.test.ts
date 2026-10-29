@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { AniListExtras } from '../src/anime-extras';
-import { ApiError } from '../src/errors';
+import { AniListExtras } from '../src/modules/catalog/anime-extras';
+import { ApiError } from '../src/shared/errors';
 import { fixture } from './fixture';
 
 function payload() {

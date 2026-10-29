@@ -10,3 +10,4 @@ coverage/
 *.log
 
 .npm-cache/
+artifacts/demo-report.json

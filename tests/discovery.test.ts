@@ -42,7 +42,7 @@ before(async () => {
 });
 after(async () => { await f?.close(); });
 
-test('Para ti incluye vistos, seguidos y conversaciones; puntúa todo el conjunto y alterna autores', async () => {
+test('Para ti excluye seguidos y publicaciones propias; puntúa todo el conjunto y alterna autores', async () => {
   const reads = f.state.catalogReads; f.state.offline = true;
   try {
     const first = await f.request('/feed?type=for-you&limit=2', me);
@@ -69,15 +69,15 @@ test('Para ti incluye vistos, seguidos y conversaciones; puntúa todo el conjunt
     }
     const mixed = items.find((item) => item.id === mixedId);
     assert.ok(mixed); assert.deepEqual(mixed.recommendation.discoveryAnimeIds, ['mal:4']);
-    assert.equal(mixed.recommendation.score, 1); // Los vistos también aportan afinidad.
-    assert.ok(items.some((item) => item.userId === followed.id));
+    assert.equal(mixed.recommendation.score, 1); // Este anime también está entre los favoritos.
+    assert.ok(items.every((item) => item.userId !== followed.id));
     assert.ok(items.some((item) => item.animeId === 'mal:1'));
     assert.ok(items.some((item) => item.text === 'Solo charla #Romance'));
     assert.equal(f.state.catalogReads, reads);
   } finally { f.state.offline = false; }
 });
 
-test('sin gustos hay conversaciones por fecha, incluso tras seguir a sus autores', async () => {
+test('sin gustos hay conversaciones por fecha; seguir a todos deja Para ti vacío', async () => {
   const first = (await f.request('/feed?type=for-you&limit=50', cold)).body;
   assert.ok(first.total > 0);
   assert.ok(first.items.every((item: any) => item.recommendation.score === 0));
@@ -87,7 +87,7 @@ test('sin gustos hay conversaciones por fecha, incluso tras seguir a sus autores
     await f.db.follow.create({ data: { followerId: cold.id, followedId: author.id } });
   }
   const empty = (await f.request('/feed?type=for-you', cold)).body;
-  assert.equal(empty.total, first.total); assert.ok(empty.items.length > 0);
+  assert.equal(empty.total, 0); assert.equal(empty.items.length, 0);
 });
 
 test('selección estable entre páginas, cuentas, likes, nuevas publicaciones y reinicios', async () => {
@@ -116,17 +116,17 @@ test('selección estable entre páginas, cuentas, likes, nuevas publicaciones y 
   assert.equal((await f.request('/feed?type=for-you')).status, 401);
 });
 
-test('seguir a un autor o marcar vistos no retira conversaciones de Para ti', async () => {
+test('seguir a un autor lo retira de Para ti; marcar vistos no excluye conversaciones', async () => {
   const first = (await f.request('/feed?type=for-you&limit=1', me)).body;
   assert.ok(first.nextCursor);
   assert.equal((await f.request(`/me/following/${bob.id}`, me, { method: 'PUT' })).status, 200);
   const next = (await f.request(`/feed?type=for-you&limit=50&cursor=${first.nextCursor}`, me)).body;
-  assert.ok(next.items.some((item: any) => item.userId === bob.id));
-  assert.equal(next.total, first.total);
+  assert.ok(next.items.every((item: any) => item.userId !== bob.id));
+  assert.ok(next.total < first.total);
   await f.request('/me/library/mal:2', me, { method: 'PATCH', body: { watched: true } });
   await f.request('/me/library/mal:3', me, { method: 'PATCH', body: { watched: true } });
   const empty = (await f.request(`/feed?type=for-you&cursor=${first.nextCursor}`, me)).body;
-  assert.equal(empty.total, first.total); assert.ok(empty.items.length > 0);
+  assert.equal(empty.total, next.total); assert.ok(empty.items.length > 0);
   assert.equal((await f.request('/feed?type=following', me)).body.total > 0, true);
 });
 

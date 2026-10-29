@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { JikanCatalog, catalogBaseUrl } from '../src/catalog';
-import { ApiError } from '../src/errors';
-import { networkCodes } from '../src/catalog-errors';
+import { JikanCatalog, catalogBaseUrl } from '../src/modules/catalog/catalog';
+import { ApiError } from '../src/shared/errors';
+import { networkCodes } from '../src/modules/catalog/catalog-errors';
 
 test('proveedor configurable conserva contrato e identidad MAL', async () => {
   const catalog = new JikanCatalog(async (url) => {
@@ -39,6 +39,52 @@ test('Jikan distingue no encontrado, límite, error y respuesta inválida', asyn
   await assert.rejects(invalid.get('mal:1'), (error: unknown) => error instanceof ApiError && error.code === 'CATALOG_INVALID_RESPONSE');
   const unavailable = new JikanCatalog(async () => { throw new Error('Sin conexión'); });
   await assert.rejects(unavailable.get('mal:1'), (error: unknown) => error instanceof ApiError && error.status === 503);
+});
+
+test('explorar temporadas usa el catálogo de temporada y conserva páginas, texto y géneros OR', async () => {
+  for (const season of ['spring', 'summer', 'fall', 'winter']) {
+    const catalog = new JikanCatalog(async (url) => {
+      const request = new URL(String(url));
+      assert.equal(request.pathname, `/v1/seasons/2026/${season}`);
+      assert.equal(request.searchParams.get('page'), '2');
+      assert.equal(request.searchParams.get('q'), null);
+      assert.equal(request.searchParams.get('sfw'), 'true');
+      return Response.json({ data: [
+        { mal_id: 1, title: 'Historia Épica', season, year: 2026, genres: [{ mal_id: 1, name: 'Action' }] },
+        { mal_id: 2, title: 'Otra historia', season, year: 2026, genres: [{ mal_id: 2, name: 'Adventure' }] },
+        { mal_id: 3, title: 'Otro año', season, year: 2025 },
+      ], pagination: { has_next_page: true } });
+    });
+    const result = await catalog.browse('epica', 2, { season, year: 2026, genres: ['mal:1', 'mal:2'] });
+    assert.deepEqual(result.items.map(anime => anime.id), ['mal:1']);
+    assert.equal(result.nextPage, 3);
+  }
+});
+
+test('un género se consulta en origen y varios conservan la semántica OR', async () => {
+  for (const genres of [['mal:1'], ['mal:1', 'mal:2']]) {
+    const catalog = new JikanCatalog(async (url) => {
+      const request = new URL(String(url));
+      assert.equal(request.searchParams.get('genres'), genres.length === 1 ? '1' : null);
+      return Response.json({ data: [
+        { mal_id: 1, title: 'Acción', genres: [{ mal_id: 1, name: 'Action' }] },
+        { mal_id: 2, title: 'Aventura', genres: [{ mal_id: 2, name: 'Adventure' }] },
+        { mal_id: 3, title: 'Otro', genres: [{ mal_id: 3, name: 'Other' }] },
+      ], pagination: { has_next_page: false } });
+    });
+    const result = await catalog.browse('', 1, { genres });
+    assert.deepEqual(result.items.map(anime => anime.id), genres.length === 1 ? ['mal:1'] : ['mal:1', 'mal:2']);
+  }
+});
+
+test('temporada sin texto devuelve los títulos del año solicitado', async () => {
+  const catalog = new JikanCatalog(async () => Response.json({ data: [
+    { mal_id: 1, title: 'Primavera', season: 'spring', year: 2026 },
+    { mal_id: 2, title: 'Invierno', season: 'winter', year: 2026 },
+  ], pagination: { has_next_page: false } }));
+  const result = await catalog.browse('', 1, { season: 'spring', year: 2026 });
+  assert.deepEqual(result.items.map(anime => anime.id), ['mal:1']);
+  assert.equal(result.nextPage, null);
 });
 
 test('consulta repetida utiliza caché acotada y no vuelve a llamar al proveedor', async () => {

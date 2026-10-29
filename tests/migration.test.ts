@@ -35,6 +35,15 @@ test('migrar una base del primer bloque conserva reviews, historial, sesiones y 
     await db.$executeRaw`INSERT INTO Operation (userId, key, fingerprint, response)
       VALUES ('old-user', 'old-operation-01', 'old-fingerprint', '{"publication":{"id":"17"}}')`;
     await db.$disconnect();
+    // Simular también los reclamos de misiones previos al sistema de puntos.
+    for (const name of ['202610110002_social', '202610110003_discovery', '202610120001_missions', '202610180001_current_rating']) {
+      await mkdir(path.join(migrations, name), { recursive: true });
+      await copyFile(`prisma/migrations/${name}/migration.sql`, path.join(migrations, name, 'migration.sql'));
+    }
+    deploy(path.join(directory, 'schema.prisma'));
+    await db.$executeRaw`INSERT INTO MissionClaim (userId, missionId, rewardId, rewardName, rulesVersion)
+      VALUES ('old-user', 'primera', 'primer-capitulo', 'Primer capítulo', '1')`;
+    await db.$disconnect();
     deploy(path.resolve('prisma/schema.prisma'));
     const publication = await db.publication.findUniqueOrThrow({ where: { id: 17 } });
     assert.equal(publication.kind, 'review'); assert.equal(publication.ratingEntryId, 42);
@@ -46,6 +55,10 @@ test('migrar una base del primer bloque conserva reviews, historial, sesiones y 
     assert.equal(ratings._avg.rating, 4); assert.equal(ratings._count, 2);
     const library = await db.libraryEntry.findFirstOrThrow();
     assert.equal(library.currentRatingId, 42);
+    assert.equal((await db.missionClaim.findFirstOrThrow()).points, 0);
+    assert.equal((await db.ratingEntry.findFirstOrThrow()).countryCode, null);
+    assert.equal((await db.user.findFirstOrThrow()).avatarUrl, null);
+    assert.deepEqual((await db.anime.findFirstOrThrow()).studios, []);
     assert.equal(library.watched, true); assert.equal(library.watchlist, false); assert.equal(library.favoritePosition, null);
     assert.equal(await db.session.count(), 1);
     assert.deepEqual((await db.operation.findFirstOrThrow()).response, { publication: { id: '17' } });

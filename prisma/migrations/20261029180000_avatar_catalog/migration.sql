@@ -1,0 +1,10 @@
+CREATE TABLE "Avatar" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "collection" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "imageUrl" TEXT NOT NULL,
+  "sourceUrl" TEXT NOT NULL,
+  "active" BOOLEAN NOT NULL DEFAULT true,
+  "sortOrder" INTEGER NOT NULL DEFAULT 0
+);
+ALTER TABLE "User" ADD COLUMN "avatarId" TEXT REFERENCES "Avatar"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -1,4 +1,4 @@
-> Actualización 18/10/2026: las reglas vigentes de puntuación, Para ti y Descubrir están en API.md y README.md. Un voto vigente por persona; editar estrellas actualiza ese voto. Para ti incluye vistos y seguidos; Descubrir agrupa solo animes no vistos. El frontend integrado está en feature/integracion-backend. Las notas históricas que contradigan estas reglas quedan reemplazadas.
+> Documento histórico de la integración anterior. Para la etapa del 25/10/2026 leer la [guía vigente de integración](docs/GUIA_INTEGRACION_FRONTEND.md) y la [auditoría](docs/AUDITORIA_FRONT_BACK.md). Las referencias a ramas anteriores, cinco misiones, rangos por vistos o inclusión de seguidos en Para ti ya no son vigentes.
 
 # Ani-Ren: esquema conceptual de datos, API y flujos
 
@@ -17,7 +17,7 @@ Actualizado: 12 de octubre de 2026. Estado: diseño general y referencia para et
 - Perfil editable: nombre y biografía. Avatar y fecha de modificación de perfil no están implementados. Comment no tiene updatedAt porque su edición no está disponible.
 - AnimeList, ListItem y ListLike están implementados: orden persistido incluso cuando ordered=false, pares únicos y reemplazo atómico del contenido, sin afectar actividad personal.
 - FeedSnapshot y FeedItem conservan la selección de Para ti: una selección activa por cuenta, vencimiento a los 20 minutos, publicaciones/posiciones únicas, puntuación y motivos. Se calcula antes de paginar y se revalidan exclusiones al leer. Son datos temporales del servidor, no historial de vistos.
-- MissionClaim guarda userId/missionId únicos, recompensa otorgada, versión de reglas y claimedAt. Progreso y rango se derivan de actividad real: no se guarda un contador editable por cliente ni se usa Operation para reclamos (PUT idempotente por identidad de misión). Las cinco definiciones y umbrales están en src/aura.ts; fueron confirmados el 12/10/2026.
+- MissionClaim guarda userId/missionId únicos, recompensa otorgada, versión de reglas y claimedAt. Progreso y rango se derivan de actividad real: no se guarda un contador editable por cliente ni se usa Operation para reclamos (PUT idempotente por identidad de misión). Las cinco definiciones y umbrales están en src/modules/aura/aura.ts; fueron confirmados el 12/10/2026.
 - Los IDs autoincrementales de actividad/publicación establecen orden de inserción y cursor. Se devuelven como strings opacos para el frontend.
 - Las sesiones usan tokens aleatorios, hash SHA-256 en SQLite, expiración fija y revocación. Las contraseñas usan scrypt.
 - Operation almacena la respuesta del POST de valoración, review, post, comentario o lista en la misma transacción para reconocer reintentos. Biblioteca permite watched=true, watchlist true/false y reemplazo de favoritos; desmarcar visto y borrados continúan pendientes.

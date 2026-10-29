@@ -6,13 +6,13 @@ import path from 'node:path';
 import type { Server } from 'node:http';
 import { PrismaClient } from '@prisma/client';
 import { createApp } from '../src/app';
-import { ApiError } from '../src/errors';
-import type { Catalog } from '../src/catalog';
-import { hashToken } from '../src/security';
-import type { AnimeExtrasProvider } from '../src/anime-extras';
+import { ApiError } from '../src/shared/errors';
+import type { Catalog } from '../src/modules/catalog/catalog';
+import { hashToken } from '../src/modules/auth/security';
+import type { AnimeExtrasProvider } from '../src/modules/catalog/anime-extras';
 
 export type Account = { id: string; token: string };
-export async function fixture(extras?: AnimeExtrasProvider) {
+export async function fixture(extras?: AnimeExtrasProvider, regional?: import('../src/modules/streaming/streaming').RegionalProvider) {
   const root = path.resolve('.test-data');
   await mkdir(root, { recursive: true });
   const directory = await mkdtemp(path.join(root, 'discovery-'));
@@ -32,11 +32,17 @@ export async function fixture(extras?: AnimeExtrasProvider) {
         genres: [{ id: romance ? 'mal:22' : 'mal:24', name: romance ? 'Romance' : 'Sci-Fi' }] };
     },
     async search(_query, page) { return { items: [await this.get('mal:1')], nextPage: page === 1 ? 2 : null }; },
+    async browse(_query, page, filters) {
+      const anime = await this.get(page === 1 ? 'mal:1' : 'mal:4');
+      const matches = (!filters.genres || anime.genres.some(genre => filters.genres!.includes(genre.id))) &&
+        (!filters.season || anime.season === filters.season) && (!filters.year || anime.year === filters.year);
+      return { items: matches ? [anime] : [], nextPage: page === 1 ? 2 : null };
+    },
   };
   let server: Server;
   let base: string;
   async function start() {
-    const app = createApp({ db, catalog, extras, corsOrigins: ['http://localhost:8081'], sessionDays: 7, timeZone: 'America/Buenos_Aires' });
+    const app = createApp({ db, catalog, extras, regional, corsOrigins: ['http://localhost:8081'], sessionDays: 7, timeZone: 'America/Buenos_Aires' });
     server = await new Promise<Server>((resolve) => {
       const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
     });

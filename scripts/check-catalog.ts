@@ -1,7 +1,7 @@
-import { JikanCatalog } from '../src/catalog';
-import { networkCodes } from '../src/catalog-errors';
-import { ApiError } from '../src/errors';
-import { config } from '../src/config';
+import { JikanCatalog } from '../src/modules/catalog/catalog';
+import { networkCodes } from '../src/modules/catalog/catalog-errors';
+import { ApiError } from '../src/shared/errors';
+import { config } from '../src/config/config';
 
 const startedAt = Date.now();
 
